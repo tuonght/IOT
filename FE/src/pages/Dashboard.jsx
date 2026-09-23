@@ -67,9 +67,6 @@ export default function Dashboard() {
           boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
         }}
       >
-        {deviceName && (
-          <div style={{ fontWeight: 700, marginBottom: 2 }}>Thiết bị: {deviceName}</div>
-        )}
         <div style={{ fontWeight: 700, marginBottom: 6 }}>{label}</div>
         {payload.map((entry) => (
           <div key={entry.name} style={{ color: entry.color }}>

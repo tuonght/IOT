@@ -100,7 +100,6 @@ export default function History() {
           <option value="Success">Success</option>
           <option value="Failed">Failed</option>
           <option value="Loading">Loading</option>
-          <option value="Timeout">Timeout</option>
         </select>
 
         <input
