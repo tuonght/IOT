@@ -1,21 +1,26 @@
 import { useState, useMemo } from "react";
 import { mockHistory } from "../mockData";
+import "./History.css";
 
 export default function History() {
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
+  // Giá trị hiện tại người dùng chọn hoặc gõ trong các ô lọc.
   const [deviceFilter, setDeviceFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [timeInput, setTimeInput] = useState("");
 
+  
   const [activeFilters, setActiveFilters] = useState({
     device: "",
     action: "",
     status: "",
     time: "",
   });
+  
   const [currentPage, setCurrentPage] = useState(1);
 
+  
   function handleSearch() {
     setActiveFilters({
       device: deviceFilter,
@@ -26,6 +31,7 @@ export default function History() {
     setCurrentPage(1);
   }
 
+  // Xóa toàn bộ lựa chọn/từ khóa và bỏ lọc.
   function handleReset() {
     setDeviceFilter("");
     setActionFilter("");
@@ -40,6 +46,7 @@ export default function History() {
     setCurrentPage(1);
   }
 
+  
   const filteredHistory = useMemo(() => {
     return mockHistory.filter((row) => {
       const matchDevice = activeFilters.device
@@ -54,7 +61,7 @@ export default function History() {
         ? row.status.toLowerCase() === activeFilters.status.toLowerCase()
         : true;
 
-      // Tìm kiếm theo chuỗi thời gian (string includes)
+      
       const matchTime = activeFilters.time
         ? row.time.toLowerCase().includes(activeFilters.time)
         : true;
@@ -64,13 +71,22 @@ export default function History() {
   }, [activeFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filteredHistory.length / pageSize));
+  const pageNumbers =
+    totalPages <= 5
+      ? Array.from({ length: totalPages }, (_, index) => index + 1)
+      : currentPage <= 3
+        ? [1, 2, 3, 4, "...", totalPages]
+        : currentPage >= totalPages - 2
+          ? [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+          : [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
   const visibleHistory = filteredHistory.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
 
   return (
-    <div>
+    <div className="history-page">
+      {/* Form lọc  */}
       <div className="page-title">History</div>
       <div className="filters">
         <select
@@ -100,7 +116,6 @@ export default function History() {
           <option value="Success">Success</option>
           <option value="Failed">Failed</option>
           <option value="Loading">Loading</option>
-          <option value="Timeout">Timeout</option>
         </select>
 
         <input
@@ -119,55 +134,77 @@ export default function History() {
         </button>
       </div>
 
-      <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Thiết Bị</th>
-              <th>Người Thực Hiện</th>
-              <th>Hành Động</th>
-              <th>Status</th>
-              <th>Thời Gian</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleHistory.length > 0 ? (
-              visibleHistory.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.id}</td>
-                  <td>{row.device}</td>
-                  <td>{row.performedBy}</td>
-                  <td>
-                    <span className={"badge " + row.action.toLowerCase()}>
-                      {row.action}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={"badge " + row.status.toLowerCase()}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td>{row.time}</td>
-                </tr>
-              ))
-            ) : (
+      
+      <div className="panel history-table-panel">
+        <div className="history-table-wrap">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: "16px" }}>
-                  Không tìm thấy kết quả nào
-                </td>
+                <th>ID</th>
+                <th>Thiết Bị</th>
+                <th>Người Thực Hiện</th>
+                <th>Hành Động</th>
+                <th>Status</th>
+                <th>Thời Gian</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {/* kết quả thì */}
+              {visibleHistory.length > 0 ? (
+                visibleHistory.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.id}</td>
+                    <td>{row.device}</td>
+                    <td>{row.performedBy}</td>
+                    <td>
+                      <span className={"badge " + row.action.toLowerCase()}>
+                        {row.action}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={"badge " + row.status.toLowerCase()}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td>{row.time}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td className="history-empty" colSpan={6}>
+                    Không tìm thấy kết quả nào
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* Bộ đếm kết quả và các nút phân trang. */}
       <div className="pagination">
-        <div>
+        <div className="history-pagination-info">
           Hiển thị {filteredHistory.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
           -{Math.min(currentPage * pageSize, filteredHistory.length)} trong tổng {filteredHistory.length} kết quả
         </div>
         <div className="pg-btns">
+          <label className="history-page-size">
+            Dòng/trang
+            <select
+              aria-label="Số dòng mỗi trang"
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              {[10, 20, 30, 40, 50].map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             className="pg-btn"
@@ -176,16 +213,22 @@ export default function History() {
           >
             ‹
           </button>
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
-            <button
-              type="button"
-              className={`pg-btn ${currentPage === page ? "active" : ""}`}
-              key={page}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </button>
-          ))}
+          {pageNumbers.map((page, index) =>
+            page === "..." ? (
+              <span className="history-page-ellipsis" key={`ellipsis-${index}`}>
+                …
+              </span>
+            ) : (
+              <button
+                type="button"
+                className={`pg-btn ${currentPage === page ? "active" : ""}`}
+                key={page}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            )
+          )}
           <button
             type="button"
             className="pg-btn"

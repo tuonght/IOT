@@ -3,36 +3,36 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
 import { mockSensorLatest, mockChartData, mockDevices } from "../mockData";
+import "./Dashboard.css";
 
 export default function Dashboard() {
   const [devices, setDevices] = useState(mockDevices);
   const [chartDevice, setChartDevice] = useState("");
-  const [toast, setToast] = useState(null); // { type: "success" | "error", message: "..." }
+  // Toast là thông báo ngắn sau thao tác thiết bị.
+  const [toast, setToast] = useState(null); 
 
+  
   const chartData = chartDevice
     ? mockChartData.filter((item) => item.device === chartDevice)
     : mockChartData;
 
+
   function showToast(type, message) {
     setToast({ type, message });
-    setTimeout(() => setToast(null), 2000); // tự ẩn sau 2 giây
+    setTimeout(() => setToast(null), 2000);
   }
 
+  
   function toggleDevice(id, newStatus) {
     const previousStatus = devices.find((d) => d.id === id)?.status;
 
-    // Bước 1: chuyển ngay sang "loading" để người dùng thấy đang xử lý
     setDevices((prev) =>
       prev.map((d) => (d.id === id ? { ...d, status: "loading" } : d))
     );
 
-    // Bước 2: giả lập độ trễ gọi API (setTimeout thay cho lời gọi axios thật sau này)
-    // Sau này thay TOÀN BỘ đoạn setTimeout này bằng:
-    // axios.post(`/api/devices/${id}/actions`, { action: newStatus })
-    //   .then(() => { set status = newStatus; showToast("success", ...) })
-    //   .catch(() => { set status = previousStatus; showToast("error", ...) })
+    
     setTimeout(() => {
-      const isSuccess = Math.random() > 0.15; // giả lập 85% thành công, 15% thất bại
+      const isSuccess = Math.random() > 0.15; 
 
       if (isSuccess) {
         setDevices((prev) =>
@@ -48,31 +48,18 @@ export default function Dashboard() {
     }, 1200);
   }
 
-  // Tooltip tùy chỉnh — hiện khi rê/nhấn vào 1 điểm trên biểu đồ.
-  // "label" chính là giá trị time của điểm đó (recharts tự truyền vào).
-  // "payload" là mảng chứa cả 3 giá trị (temperature/humidity/light) tại điểm đó.
+ 
     function CustomTooltip({ active, payload, label }) {
     if (!active || !payload || payload.length === 0) return null;
 
-    const deviceName = payload[0]?.payload?.device;
-
     return (
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 8,
-          padding: "10px 14px",
-          fontSize: 12,
-          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-        }}
-      >
-        {deviceName && (
-          <div style={{ fontWeight: 700, marginBottom: 2 }}>Thiết bị: {deviceName}</div>
-        )}
-        <div style={{ fontWeight: 700, marginBottom: 6 }}>{label}</div>
+      <div className="dashboard-tooltip">
+        <div className="dashboard-tooltip-label">{label}</div>
         {payload.map((entry) => (
-          <div key={entry.name} style={{ color: entry.color }}>
+          <div
+            className={`dashboard-tooltip-entry dashboard-tooltip-${entry.dataKey}`}
+            key={entry.name}
+          >
             {entry.name}: {entry.value}
           </div>
         ))}
@@ -82,6 +69,11 @@ export default function Dashboard() {
 
   return (
     <div>
+      {toast && (
+        <div className={`toast ${toast.type}`}>
+          {toast.message}
+        </div>
+      )}
       <div className="page-title">Dashboard</div>
 
       <div className="metrics">
@@ -108,19 +100,23 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Khu vực biểu đồ lịch sử và thẻ điều khiển thiết bị. */}
       <div className="dash-grid">
         <div className="panel">
           <div className="panel-title chart-header">
             <span>Sensor History over Time</span>
 
           </div>
+          {/* ResponsiveContainer co giãn theo panel; LineChart nhận mảng chartData. */}
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={chartData}>
               <CartesianGrid stroke="#e5e7eb" />
               <XAxis dataKey="time" tick={false} />
               <YAxis fontSize={11} />
+              {/* Tooltip và Legend giúp đọc giá trị/tên từng đường. */}
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+              <Legend iconType="circle" />
+              
               <Line type="monotone" dataKey="temperature" stroke="#2563eb" name="Temperature" />
               <Line type="monotone" dataKey="humidity" stroke="#dc2626" name="Humidity" />
               <Line type="monotone" dataKey="light" stroke="#d97706" name="Light" />
@@ -129,10 +125,12 @@ export default function Dashboard() {
         </div>
 
         <div className="device-list">
+        
           {devices.map((d) => (
             <div className="device-card" key={d.id}>
               <div className="device-top">
                 <span className="device-name">{d.name}</span>
+                
                 <span
                   className={
                     "device-state " +
@@ -142,6 +140,7 @@ export default function Dashboard() {
                   {d.status}
                 </span>
               </div>
+              {/* Nút bị khóa khi thao tác đang ở trạng thái loading. */}
               <div className="device-btns">
                 <button
                   className={"dbtn" + (d.status === "ON" ? " selected on" : "")}
@@ -163,6 +162,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Chỉ render toast khi đã có thông báo. */}
       {toast && (
         <div className={"toast " + toast.type}>
           {toast.message}

@@ -1,0 +1,5 @@
+/* ===== REGISTER PAGE ===== */
+/* Căn giữa link quay lại Login ở cuối form đăng ký. */
+.register-links {
+  justify-content: center;
+}

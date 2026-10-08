@@ -1,0 +1,148 @@
+.profile-card {
+  display: flex;
+  max-width: 700px;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 26px 30px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+/* Cột ảnh đại diện và nút tải ảnh. */
+.profile-photo-wrap {
+  display: flex;
+  min-width: 120px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Hộp ảnh vuông bo góc; gradient xám-xanh làm nền placeholder. */
+.profile-photo {
+  display: flex;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e5e7eb, #dfe7ff);
+}
+
+.profile-photo.has-image {
+  border-color: var(--accent-soft);
+}
+
+.profile-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Chữ cái đại diện khi chưa có ảnh. */
+.profile-photo-placeholder {
+  color: var(--ink-soft);
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* Nhãn nút tải ảnh; input file trong suốt phủ lên để nhận click. */
+.photo-upload-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Cả vùng nhãn có thể bấm để mở hộp chọn file nhưng không nhìn thấy input. */
+.photo-upload-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Nội dung xem/form sửa dùng phần chiều rộng còn lại cạnh cột ảnh. */
+.profile-content,
+.profile-form {
+  flex: 1;
+}
+
+/* Mỗi cặp nhãn-giá trị hiển thị theo hàng ngang. */
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Nhãn có bề rộng cố định để các giá trị thẳng cột với nhau. */
+.profile-row b {
+  flex: 0 0 120px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+
+.profile-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-actions {
+  margin-top: 18px;
+}
+
+.profile-btn {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Mỗi trường trong form sửa xếp label trên input. */
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+/* Nhãn form sửa nhỏ, đậm và màu xám phụ. */
+.profile-field label {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Ô nhập thông tin: viền xám và bo góc. */
+.profile-field input {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+/* Focus input đổi viền sang xanh nhấn. */
+.profile-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}

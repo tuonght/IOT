@@ -5,18 +5,19 @@ import Topbar from "./Topbar";
 export default function Layout() {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
 
-  // Nếu chưa đăng nhập, đá thẳng về trang Login — không cho xem 4 trang bên trong
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
 
   return (
+    // app-shell là khung flex chung chứa Sidebar và phần nội dung bên phải.
     <div className="app-shell">
       <Sidebar />
       <div className="main">
         <Topbar />
         <div className="content">
-          <Outlet /> {/* đây là nơi Dashboard/DataSensor/History/Profile được render vào */}
+          {/* Router thay Outlet bằng trang con đúng với URL hiện tại. */}
+          <Outlet />
         </div>
       </div>
     </div>

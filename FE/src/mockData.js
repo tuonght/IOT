@@ -1,5 +1,4 @@
 
-
 export const mockSensorLatest = {
   temperature: 28.5,
   humidity: 72,
@@ -8,17 +7,18 @@ export const mockSensorLatest = {
 };
 
 export const mockChartData = [
-  { device: "Điều hòa", time: "2026-08-07 08:00:00", temperature: 26, humidity: 75, light: 400 },
-  { device: "Điều hòa", time: "2026-08-08 10:07:32", temperature: 27, humidity: 73, light: 550 },
-  { device: "Đèn", time: "2026-08-08 12:56:36", temperature: 29, humidity: 70, light: 700 },
-  { device: "Điều hòa", time: "2026-08-08 14:36:36", temperature: 30, humidity: 68, light: 750 },
-  { device: "Đèn", time: "2026-08-08 16:02:15", temperature: 29, humidity: 71, light: 600 },
-  { device: "Quạt", time: "2026-08-08 18:00:00", temperature: 27, humidity: 74, light: 450 },
-  { device: "Điều hòa", time: "2026-08-08 20:00:05", temperature: 26, humidity: 76, light: 300 },
-  { device: "Điều hòa", time: "2026-08-08 21:02:15", temperature: 29, humidity: 71, light: 600 },
-  { device: "Quạt", time: "2026-08-08 21:08:35", temperature: 27, humidity: 74, light: 450 },
-  { device: "Quạt", time: "2026-08-08 22:00:05", temperature: 26, humidity: 76, light: 300 },
+  { time: "2026-08-07 08:00:00", temperature: 26, humidity: 75, light: 400 },
+  { time: "2026-08-08 10:07:32", temperature: 27, humidity: 73, light: 550 },
+  { time: "2026-08-08 12:56:36", temperature: 29, humidity: 70, light: 700 },
+  { time: "2026-08-08 14:36:36", temperature: 30, humidity: 68, light: 750 },
+  { time: "2026-08-08 16:02:15", temperature: 29, humidity: 71, light: 600 },
+  { time: "2026-08-08 18:00:00", temperature: 27, humidity: 74, light: 450 },
+  { time: "2026-08-08 20:00:05", temperature: 26, humidity: 76, light: 300 },
+  { time: "2026-08-08 21:02:15", temperature: 29, humidity: 71, light: 600 },
+  { time: "2026-08-08 21:08:35", temperature: 27, humidity: 74, light: 450 },
+  { time: "2026-08-08 22:00:05", temperature: 26, humidity: 76, light: 300 },
 ];
+
 
 export const mockDevices = [
   { id: 1, name: "Điều hòa", status: "OFF" },
@@ -38,25 +38,70 @@ export const mockSensorData = [
   { id: 94, type: "Ánh sáng", value: "631 adc", time: "2026-08-19 10:29:48" },
   { id: 93, type: "Nhiệt độ", value: "27.9 °C", time: "2026-08-19 10:29:45" },
   { id: 92, type: "Độ ẩm", value: "75 %", time: "2026-08-19 10:29:42" },
+  ...Array.from({ length: 64 }, (_, index) => {
+    const id = 91 - index;
+    const secondsSinceMidnight = 10 * 60 * 60 + 29 * 60 + 39 - index * 3;
+    const hours = String(Math.floor(secondsSinceMidnight / 3600)).padStart(2, "0");
+    const minutes = String(
+      Math.floor((secondsSinceMidnight % 3600) / 60)
+    ).padStart(2, "0");
+    const seconds = String(secondsSinceMidnight % 60).padStart(2, "0");
+    const type = ["Ánh sáng", "Nhiệt độ", "Độ ẩm"][index % 3];
+    const value =
+      type === "Ánh sáng"
+        ? `${350 + ((index * 73) % 651)} adc`
+        : type === "Nhiệt độ"
+          ? `${(25 + ((index * 7) % 90) / 10).toFixed(1)} °C`
+          : `${60 + ((index * 11) % 31)} %`;
+
+    return {
+      id,
+      type,
+      value,
+      time: `2026-08-19 ${hours}:${minutes}:${seconds}`,
+    };
+  }),
 ];
+
 
 export const mockHistory = [
   { id: 1, device: "Điều hòa", performedBy: "Nguyễn Tường", action: "ON", status: "Success", time: "2026-08-19 09:44:14" },
   { id: 2, device: "Điều hòa", performedBy: "Nguyễn Tường", action: "OFF", status: "Failed", time: "2026-08-19 09:44:35" },
   { id: 3, device: "Đèn", performedBy: "Nguyễn Tường", action: "ON", status: "Loading", time: "2026-08-19 10:05:42" },
   { id: 4, device: "Quạt", performedBy: "Nguyễn Tường", action: "ON", status: "Success", time: "2026-08-19 10:05:45" },
-  { id: 5, device: "Quạt", performedBy: "Nguyễn Tường", action: "OFF", status: "Timeout", time: "2026-08-19 10:05:57" },
+  { id: 5, device: "Quạt", performedBy: "Nguyễn Tường", action: "OFF", status: "Loading", time: "2026-08-19 10:05:57" },
   { id: 6, device: "Điều hòa", performedBy: "Nguyễn Tường", action: "ON", status: "Success", time: "2026-08-19 09:44:14" },
   { id: 7, device: "Điều hòa", performedBy: "Nguyễn Tường", action: "OFF", status: "Failed", time: "2026-08-19 09:44:35" },
   { id: 8, device: "Đèn", performedBy: "Nguyễn Tường", action: "ON", status: "Loading", time: "2026-08-19 10:05:42" },
   { id: 9, device: "Quạt", performedBy: "Nguyễn Tường", action: "ON", status: "Success", time: "2026-08-19 10:05:45" },
-  { id: 10, device: "Quạt", performedBy: "Nguyễn Tường", action: "OFF", status: "Timeout", time: "2026-08-19 10:05:57" },
+  { id: 10, device: "Quạt", performedBy: "Nguyễn Tường", action: "OFF", status: "Loading", time: "2026-08-19 10:05:57" },
   { id: 11, device: "Điều hòa", performedBy: "Nguyễn Tường", action: "ON", status: "Success", time: "2026-08-19 09:44:14" },
   { id: 12, device: "Điều hòa", performedBy: "Nguyễn Tường", action: "OFF", status: "Failed", time: "2026-08-19 09:44:35" },
   { id: 13, device: "Đèn", performedBy: "Nguyễn Tường", action: "ON", status: "Loading", time: "2026-08-19 10:05:42" },
   { id: 14, device: "Quạt", performedBy: "Nguyễn Tường", action: "ON", status: "Success", time: "2026-08-19 10:05:45" },
-  { id: 15, device: "Quạt", performedBy: "Nguyễn Tường", action: "OFF", status: "Timeout", time: "2026-08-19 10:05:57" },
+  { id: 15, device: "Quạt", performedBy: "Nguyễn Tường", action: "OFF", status: "Loading", time: "2026-08-19 10:05:57" },
+  ...Array.from({ length: 60 }, (_, index) => {
+    const secondsSinceMidnight = 10 * 60 * 59 - index * 7;
+    const hours = String(Math.floor(secondsSinceMidnight / 3600)).padStart(2, "0");
+    const minutes = String(
+      Math.floor((secondsSinceMidnight % 3600) / 60)
+    ).padStart(2, "0");
+    const seconds = String(secondsSinceMidnight % 60).padStart(2, "0");
+    const actions = ["ON", "OFF"];
+    const statuses = ["Success", "Failed", "Loading"];
+    const devices = ["Điều hòa", "Đèn", "Quạt"];
+
+    return {
+      id: index + 16,
+      device: devices[index % devices.length],
+      performedBy: "Nguyễn Tường",
+      action: actions[index % actions.length],
+      status: statuses[index % statuses.length],
+      time: `2026-08-19 ${hours}:${minutes}:${seconds}`,
+    };
+  }),
 ];
+
 
 export const mockProfile = {
   username: "Nguyễn Tường",
