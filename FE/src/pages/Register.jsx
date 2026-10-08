@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import "./Auth.css";
+import "./Register.css";
 
 export default function Register() {
+  // State lưu nội dung các ô đăng ký và lỗi validate.
   const [Email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -9,6 +12,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  
   function handleSubmit(e) {
     e.preventDefault();
 
@@ -21,18 +25,19 @@ export default function Register() {
       return;
     }
 
-    // TẠM THỜI: chưa có Backend.
-    // Sau này thay bằng: axios.post("/api/auth/register", { username, password, fullName })
+    
     alert("Đăng ký thành công (dữ liệu mẫu) — chuyển sang trang Đăng nhập.");
     navigate("/login");
   }
 
   return (
+    
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="auth-title">Tạo tài khoản</div>
         <div className="auth-sub">Đăng ký để sử dụng hệ thống</div>
 
+        
         {error && <div className="error-text">{error}</div>}
 
         <form onSubmit={handleSubmit}>
@@ -75,7 +80,8 @@ export default function Register() {
           <button type="submit" className="btn">Đăng ký</button>
         </form>
 
-        <div className="auth-links" style={{ justifyContent: "center" }}>
+        {/* Class riêng để căn giữa link đăng nhập ở trang đăng ký. */}
+        <div className="auth-links register-links">
           <Link to="/login">Đã có tài khoản? Đăng nhập</Link>
         </div>
       </div>

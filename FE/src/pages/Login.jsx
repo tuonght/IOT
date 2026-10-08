@@ -1,26 +1,28 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import "./Auth.css";
 
 export default function Login() {
+  
   const [Email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  // Xử lý submit đăng nhập; hiện chỉ kiểm tra rỗng và mô phỏng thành công.
   function handleSubmit(e) {
-    e.preventDefault(); // chặn form load lại trang (hành vi mặc định của HTML form)
+    e.preventDefault(); 
 
     if (!Email || !password) {
       setError("Vui lòng nhập đầy đủ email và mật khẩu.");
       return;
     }
 
-    // TẠM THỜI: chưa có Backend, giả lập đăng nhập luôn thành công.
-    // Sau này thay đoạn này bằng: axios.post("/api/auth/login", { username, password })
+    
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("username", Email);
 
-    navigate("/dashboard"); // điều hướng sang Dashboard sau khi "đăng nhập"
+    navigate("/dashboard"); 
   }
 
   return (
@@ -31,6 +33,7 @@ export default function Login() {
 
         {error && <div className="error-text">{error}</div>}
 
+        {/* Form gọi handleSubmit; mỗi input là controlled input do React quản lý. */}
         <form onSubmit={handleSubmit}>
           <div className="field-group">
             <label>Email</label>
@@ -53,6 +56,7 @@ export default function Login() {
           <button type="submit" className="btn">Đăng nhập</button>
         </form>
 
+        {/* Link điều hướng nội bộ, không tải lại toàn bộ trang. */}
         <div className="auth-links">
           <Link to="/forgot-password">Quên mật khẩu?</Link>
           <Link to="/register">Tạo tài khoản mới</Link>

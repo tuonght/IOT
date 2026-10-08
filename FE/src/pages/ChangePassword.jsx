@@ -1,21 +1,26 @@
 import { useState } from "react";
+import "./ChangePassword.css";
 
 export default function ChangePassword({ onBack, onLogout }) {
+  // Gom ba ô mật khẩu vào một object state để cập nhật theo name input.
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
+  // Hai trạng thái để render thông báo kết quả.
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // Cập nhật input đang gõ và xóa lỗi cũ để người dùng thử lại.
   function handleChange(e) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError(""); // Xóa thông báo lỗi khi người dùng gõ lại
   }
 
+  // Validate các điều kiện trước khi đánh dấu thao tác thành công.
   function handleSubmit(e) {
     e.preventDefault();
 
@@ -55,45 +60,30 @@ export default function ChangePassword({ onBack, onLogout }) {
   }
 
   return (
-    <div style={{ maxWidth: "480px", margin: "40px auto", padding: "0 16px" }}>
-      <div className="page-title" style={{ textAlign: "center", marginBottom: "24px" }}>
+    // Class riêng để layout đổi mật khẩu có thể style độc lập.
+    <div className="change-password-page">
+      <div className="page-title change-password-title">
         Đổi Mật Khẩu
       </div>
 
-      <div className="panel" style={{ padding: "28px" }}>
+      <div className="panel change-password-panel">
+        {/* Thông báo lỗi/thành công chỉ được render khi state tương ứng bật. */}
         {error && (
-          <div
-            style={{
-              padding: "10px 14px",
-              marginBottom: "16px",
-              backgroundColor: "#fee2e2",
-              color: "#dc2626",
-              borderRadius: "6px",
-              fontSize: "14px",
-            }}
-          >
+          <div className="change-password-message change-password-error">
             {error}
           </div>
         )}
 
         {success && (
-          <div
-            style={{
-              padding: "10px 14px",
-              marginBottom: "16px",
-              backgroundColor: "#dcfce7",
-              color: "#16a34a",
-              borderRadius: "6px",
-              fontSize: "14px",
-            }}
-          >
+          <div className="change-password-message change-password-success">
             Đổi mật khẩu thành công!
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        {/* Submit form gọi handleSubmit; input controlled theo formData. */}
+        <form className="change-password-form" onSubmit={handleSubmit}>
           <div>
-            <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500 }}>
+            <label className="change-password-label">
               Mật khẩu hiện tại
             </label>
             <input
@@ -102,12 +92,11 @@ export default function ChangePassword({ onBack, onLogout }) {
               placeholder="Nhập mật khẩu cũ"
               value={formData.currentPassword}
               onChange={handleChange}
-              style={{ width: "100%", boxSizing: "border-box" }}
             />
           </div>
 
           <div>
-            <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500 }}>
+            <label className="change-password-label">
               Mật khẩu mới
             </label>
             <input
@@ -116,12 +105,11 @@ export default function ChangePassword({ onBack, onLogout }) {
               placeholder="Tối thiểu 6 ký tự"
               value={formData.newPassword}
               onChange={handleChange}
-              style={{ width: "100%", boxSizing: "border-box" }}
             />
           </div>
 
           <div>
-            <label style={{ display: "block", marginBottom: "6px", fontSize: "14px", fontWeight: 500 }}>
+            <label className="change-password-label">
               Xác nhận mật khẩu mới
             </label>
             <input
@@ -130,12 +118,12 @@ export default function ChangePassword({ onBack, onLogout }) {
               placeholder="Nhập lại mật khẩu mới"
               value={formData.confirmPassword}
               onChange={handleChange}
-              style={{ width: "100%", boxSizing: "border-box" }}
             />
           </div>
 
-          <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
-            <button type="submit" className="btn-sm" style={{ flex: 1, padding: "10px 0" }}>
+          {/* Nhóm nút; nút quay lại chỉ hiện nếu component cha truyền onBack. */}
+          <div className="change-password-actions">
+            <button type="submit" className="btn-sm">
               Xác Nhận Đổi
             </button>
             {onBack && (
@@ -143,7 +131,6 @@ export default function ChangePassword({ onBack, onLogout }) {
                 type="button"
                 className="btn-sm btn-ghost"
                 onClick={onBack}
-                style={{ flex: 1, padding: "10px 0" }}
               >
                 Hủy / Quay Lại
               </button>

@@ -1,0 +1,210 @@
+.history-page {
+  display: flex;
+  height: calc(100vh - 121px);
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.history-page > .page-title,
+.history-page > .filters,
+.history-page > .pagination {
+  flex: 0 0 auto;
+}
+
+.history-page .filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+
+.history-page .filters select,
+.history-page .filters input {
+  min-width: 130px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12.5px;
+}
+
+.history-page table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Tiêu đề cột in hoa, cỡ nhỏ, màu xám phụ. */
+.history-page thead th {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+
+.history-page tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+
+.history-page tbody tr:hover {
+  background: #fafbfc;
+}
+
+/* Badge trạng thái/hành động là nhãn nhỏ bo góc. */
+.history-page .badge {
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+
+.history-page .badge.on,
+.history-page .badge.success {
+  background: #eafaef;
+  color: var(--ok);
+}
+
+.history-page .badge.off,
+.history-page .badge.failed {
+  background: #fbecec;
+  color: var(--off);
+}
+
+
+.history-page .badge.loading {
+  background: #fff6dd;
+  color: var(--warn);
+}
+
+
+.history-page .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.history-page .history-pagination-info {
+  min-width: 0;
+}
+
+/* Xếp nút phân trang thành hàng ngang. */
+.history-page .pg-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.history-page .history-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.history-page .history-page-size select {
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+
+.history-page .history-page-ellipsis {
+  padding: 0 2px;
+}
+
+/* Nút trang mặc định nền trắng, viền xám. */
+.history-page .pg-btn {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+
+.history-page .pg-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+/* nut tim kiem*/
+.btn-sm {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+
+.history-page .pg-btn.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Bỏ padding mặc định của panel vì bảng đã tự có padding trong từng ô. */
+.history-page .history-table-panel {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 0;
+  overflow: hidden;
+}
+
+.history-page .history-table-wrap {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.history-page thead th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--panel);
+}
+
+.history-page .history-empty {
+  padding: 16px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .history-page .pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-page .pg-btns {
+    flex-wrap: wrap;
+  }
+}

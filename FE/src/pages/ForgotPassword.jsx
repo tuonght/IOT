@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import "./Auth.css";
+import "./ForgotPassword.css";
 
 export default function ForgotPassword() {
+  
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
+ 
   function handleSubmit(e) {
     e.preventDefault();
     if (!email.trim()) {
@@ -14,8 +18,7 @@ export default function ForgotPassword() {
     }
 
     setError("");
-    // TẠM THỜI: chưa có Backend gửi email thật.
-    // Sau này thay bằng: axios.post("/api/auth/forgot-password", { email })
+   
     setSent(true);
   }
 
@@ -25,8 +28,9 @@ export default function ForgotPassword() {
         <div className="auth-title">Quên mật khẩu</div>
         <div className="auth-sub">Nhập tài khoản/email để nhận hướng dẫn đặt lại mật khẩu</div>
 
+        {/* Sau khi gửi thì hiện thông báo; trước đó hiện form nhập email. */}
         {sent ? (
-          <div style={{ fontSize: 13, color: "#16a34a", marginBottom: 16 }}>
+          <div className="forgot-password-success">
             Đã gửi hướng dẫn đặt lại mật khẩu (dữ liệu mẫu). Kiểm tra email của bạn.
           </div>
         ) : (
@@ -45,7 +49,7 @@ export default function ForgotPassword() {
           </form>
         )}
 
-        <div className="auth-links" style={{ justifyContent: "center" }}>
+        <div className="auth-links forgot-password-links">
           <Link to="/login">Quay lại Đăng nhập</Link>
         </div>
       </div>

@@ -1,0 +1,226 @@
+.data-sensor-page {
+  display: flex;
+  height: calc(100vh - 121px);
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--ink);
+}
+/* Tiêu đề */
+.data-sensor-page .sensor-page-title {
+  flex: 0 0 auto;
+  font-size: 19px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* Hàng các ô lọc */
+.data-sensor-page .sensor-filters {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* Kiểu chung cho select và ô tìm kiếm: nền trắng, viền xám, chữ chính. */
+.data-sensor-page .sensor-filters select,
+.data-sensor-page .sensor-filters input {
+  min-width: 150px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+/* Ô tìm kiếm có thể co giãn  */
+.data-sensor-page .sensor-filters input {
+  flex: 1 1 240px;
+}
+
+/* Viền màu xanh */
+.data-sensor-page .sensor-filters select:focus,
+.data-sensor-page .sensor-filters input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Nút tìm kiếm  */
+.data-sensor-page .sensor-button {
+  padding: 9px 18px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+.data-sensor-page .sensor-button:hover {
+  opacity: 0.9;
+}
+
+/* Nút bỏ tìm kiếm  */
+.data-sensor-page .sensor-button-ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-soft);
+}
+
+/* Khung bao bảng */
+.data-sensor-page .sensor-table-panel {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+
+.data-sensor-page .sensor-table-wrap {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.data-sensor-page table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+/* Hàng tiêu đề bảng */
+.data-sensor-page thead th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* Ô dữ liệu*/
+.data-sensor-page tbody td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+
+.data-sensor-page tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+
+.data-sensor-page tbody tr:hover {
+  background: #fafbfc;
+}
+
+/* Thông báo khi không có kết quả*/
+.data-sensor-page .sensor-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+/* Dòng phân trang */
+.data-sensor-page .sensor-pagination {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.data-sensor-page .sensor-pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.data-sensor-page .sensor-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.data-sensor-page .sensor-page-size select {
+  padding: 5px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+
+.data-sensor-page .sensor-page-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Nút trang mặc định */
+.data-sensor-page .sensor-page-button {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* Nút không khả dụng được làm mờ. */
+.data-sensor-page .sensor-page-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.data-sensor-page .sensor-page-button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.data-sensor-page .sensor-page-ellipsis {
+  padding: 0 2px;
+}
+
+@media (max-width: 640px) {
+  .data-sensor-page .sensor-filters > * {
+    flex: 1 1 100%;
+  }
+
+  .data-sensor-page .sensor-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .data-sensor-page .sensor-pagination-info {
+    flex-wrap: wrap;
+  }
+
+  .data-sensor-page .sensor-page-buttons {
+    flex-wrap: wrap;
+  }
+}

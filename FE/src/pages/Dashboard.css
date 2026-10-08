@@ -1,0 +1,230 @@
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+/* Thẻ số liệu trắng */
+.metric-card {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.metric-card.humi {
+  border-left-color: var(--off);
+}
+
+.metric-card.light {
+  border-left-color: #d97706;
+}
+
+
+.metric-label {
+  margin-bottom: 6px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+.metric-value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.metric-unit {
+  margin-left: 2px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 240px;
+  gap: 14px;
+}
+
+
+.panel-title {
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+.device-card {
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+
+.device-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.device-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* Nhãn trạng thái cơ bản */
+.device-state {
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.device-state.off {
+  background: #f1f2f4;
+  color: var(--ink-soft);
+}
+
+.device-state.on {
+  background: #eafaef;
+  color: var(--ok);
+}
+
+.device-state.loading {
+  background: #fff6dd;
+  color: var(--warn);
+}
+
+/* Hai nút ON/OFF đặt cạnh nhau, chia đều chiều rộng. */
+.device-btns {
+  display: flex;
+  gap: 6px;
+}
+
+/* Trạng thái mặc định của nút thiết bị: trắng, viền và chữ xám. */
+.dbtn {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+.dbtn.on {
+  border-color: #b9e8c8;
+  background: #eafaef;
+  color: var(--ok);
+}
+
+.dbtn.off {
+  border-color: #f3c2c2;
+  background: #fbecec;
+  color: var(--off);
+}
+
+
+.dbtn.selected.on {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #fff;
+}
+
+.dbtn.selected.off {
+  border-color: var(--off);
+  background: var(--off);
+  color: #fff;
+}
+
+
+.dbtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Khung tooltip nổi trên biểu đồ: nền trắng, viền và bóng nhẹ. */
+.dashboard-tooltip {
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+}
+
+.dashboard-tooltip-label {
+  margin-bottom: 6px;
+  font-weight: 700;
+  color: #1f2937;
+}
+.dashboard-tooltip-entry {
+  color: #2563eb;
+}
+
+.dashboard-tooltip-humidity {
+  color: #dc2626;
+}
+
+.dashboard-tooltip-light {
+  color: #d97706;
+}
+
+/* Toast nổi góc trên bên phải, luôn nằm trên các thành phần khác. */
+.toast {
+  position: fixed;
+  top: 24px;
+  right: 32px;
+  z-index: 100;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+.toast.success {
+  background: var(--ok);
+}
+
+
+.toast.error {
+  background: var(--off);
+}
+
+/* Màn hình hẹp: chuyển lưới thành một cột để dễ đọc trên điện thoại. */
+@media (max-width: 760px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+}
