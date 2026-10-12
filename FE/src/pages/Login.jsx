@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
+import { api } from "../api";
 import "./Auth.css";
 
 export default function Login() {
@@ -7,10 +8,11 @@ export default function Login() {
   const [Email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Xử lý submit đăng nhập; hiện chỉ kiểm tra rỗng và mô phỏng thành công.
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault(); 
 
     if (!Email || !password) {
@@ -18,11 +20,19 @@ export default function Login() {
       return;
     }
 
-    
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("username", Email);
-
-    navigate("/dashboard"); 
+    setError("");
+    setIsSubmitting(true);
+    try {
+      const user = await api.login({ email: Email, password });
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("email", user.email);
+      localStorage.setItem("username", user.username);
+      navigate("/dashboard");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -31,6 +41,11 @@ export default function Login() {
         <div className="auth-title">IOT CONTROL</div>
         <div className="auth-sub">Đăng nhập để tiếp tục</div>
 
+        {location.state?.passwordReset && (
+          <div className="forgot-password-success">
+            Đặt lại mật khẩu thành công. Hãy đăng nhập bằng mật khẩu mới.
+          </div>
+        )}
         {error && <div className="error-text">{error}</div>}
 
         {/* Form gọi handleSubmit; mỗi input là controlled input do React quản lý. */}
@@ -38,22 +53,28 @@ export default function Login() {
           <div className="field-group">
             <label>Email</label>
             <input
-              type="text"
+              type="email"
+              autoComplete="email"
               value={Email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Nhập email"
+              required
             />
           </div>
           <div className="field-group">
             <label>Mật khẩu</label>
             <input
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Nhập mật khẩu"
+              required
             />
           </div>
-          <button type="submit" className="btn">Đăng nhập</button>
+          <button type="submit" className="btn" disabled={isSubmitting}>
+            {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
+          </button>
         </form>
 
         {/* Link điều hướng nội bộ, không tải lại toàn bộ trang. */}

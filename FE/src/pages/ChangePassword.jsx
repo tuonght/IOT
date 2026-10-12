@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { api } from "../api";
 import "./ChangePassword.css";
 
 export default function ChangePassword({ onBack, onLogout }) {
+  const navigate = useNavigate();
   // Gom ba ô mật khẩu vào một object state để cập nhật theo name input.
   const [formData, setFormData] = useState({
     currentPassword: "",
@@ -12,6 +15,7 @@ export default function ChangePassword({ onBack, onLogout }) {
   // Hai trạng thái để render thông báo kết quả.
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Cập nhật input đang gõ và xóa lỗi cũ để người dùng thử lại.
   function handleChange(e) {
@@ -21,7 +25,7 @@ export default function ChangePassword({ onBack, onLogout }) {
   }
 
   // Validate các điều kiện trước khi đánh dấu thao tác thành công.
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     // 1. Kiểm tra rỗng
@@ -48,14 +52,27 @@ export default function ChangePassword({ onBack, onLogout }) {
       return;
     }
 
-    // TODO: Khi nối API thật:
-    // axios.post('/api/auth/change-password', formData)
-    setSuccess(true);
-    alert("Đổi mật khẩu thành công! Bạn cần đăng nhập lại.");
-
-    // Tự động đăng xuất sau khi đổi pass thành công nếu muốn
-    if (onLogout) {
-      onLogout();
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await api.changePassword({
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+      });
+      setSuccess(true);
+      await api.logout();
+      if (onLogout) {
+        onLogout();
+      } else {
+        localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("email");
+        localStorage.removeItem("username");
+        navigate("/login");
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -123,8 +140,8 @@ export default function ChangePassword({ onBack, onLogout }) {
 
           {/* Nhóm nút; nút quay lại chỉ hiện nếu component cha truyền onBack. */}
           <div className="change-password-actions">
-            <button type="submit" className="btn-sm">
-              Xác Nhận Đổi
+            <button type="submit" className="btn-sm" disabled={isSubmitting}>
+              {isSubmitting ? "Đang lưu..." : "Xác Nhận Đổi"}
             </button>
             {onBack && (
               <button

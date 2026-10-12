@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
-import { mockHistory } from "../mockData";
+import { useState, useMemo, useEffect } from "react";
+import { api } from "../api";
 import "./History.css";
 
 export default function History() {
+  const [historyRows, setHistoryRows] = useState([]);
+  const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState(10);
   // Giá trị hiện tại người dùng chọn hoặc gõ trong các ô lọc.
   const [deviceFilter, setDeviceFilter] = useState("");
@@ -20,7 +22,29 @@ export default function History() {
   
   const [currentPage, setCurrentPage] = useState(1);
 
-  
+  useEffect(() => {
+    let mounted = true;
+
+    async function refreshHistory() {
+      try {
+        const rows = await api.history();
+        if (mounted) {
+          setHistoryRows(rows || []);
+          setError("");
+        }
+      } catch (requestError) {
+        if (mounted) setError(requestError.message);
+      }
+    }
+
+    refreshHistory();
+    const intervalId = window.setInterval(refreshHistory, 5000);
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   function handleSearch() {
     setActiveFilters({
       device: deviceFilter,
@@ -48,7 +72,7 @@ export default function History() {
 
   
   const filteredHistory = useMemo(() => {
-    return mockHistory.filter((row) => {
+    return historyRows.filter((row) => {
       const matchDevice = activeFilters.device
         ? row.device.toLowerCase() === activeFilters.device.toLowerCase()
         : true;
@@ -63,12 +87,13 @@ export default function History() {
 
       
       const matchTime = activeFilters.time
-        ? row.time.toLowerCase().includes(activeFilters.time)
+        ? row.time?.replace("T", " ").toLowerCase().includes(activeFilters.time)
         : true;
 
       return matchDevice && matchAction && matchStatus && matchTime;
     });
-  }, [activeFilters]);
+  }, [activeFilters, historyRows]);
+  const availableDevices = [...new Set(historyRows.map((row) => row.device))];
 
   const totalPages = Math.max(1, Math.ceil(filteredHistory.length / pageSize));
   const pageNumbers =
@@ -88,15 +113,16 @@ export default function History() {
     <div className="history-page">
       {/* Form lọc  */}
       <div className="page-title">History</div>
+      {error && <div className="error-text">{error}</div>}
       <div className="filters">
         <select
           value={deviceFilter}
           onChange={(e) => setDeviceFilter(e.target.value)}
         >
           <option value="">Thiết Bị</option>
-          <option value="Điều hòa">Điều hòa</option>
-          <option value="Đèn">Đèn</option>
-          <option value="Quạt">Quạt</option>
+          {availableDevices.map((device) => (
+            <option key={device} value={device}>{device}</option>
+          ))}
         </select>
 
         <select
@@ -166,7 +192,7 @@ export default function History() {
                         {row.status}
                       </span>
                     </td>
-                    <td>{row.time}</td>
+                    <td>{row.time?.replace("T", " ")}</td>
                   </tr>
                 ))
               ) : (

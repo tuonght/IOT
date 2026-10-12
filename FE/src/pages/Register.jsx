@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { api } from "../api";
 import "./Auth.css";
 import "./Register.css";
 
@@ -10,10 +11,10 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
 
     if (!Email || !username || !password) {
@@ -25,9 +26,16 @@ export default function Register() {
       return;
     }
 
-    
-    alert("Đăng ký thành công (dữ liệu mẫu) — chuyển sang trang Đăng nhập.");
-    navigate("/login");
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await api.register({ email: Email, username, password });
+      navigate("/login");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -45,9 +53,11 @@ export default function Register() {
             <label>Email</label>
             <input
               type="email"
+              autoComplete="email"
               value={Email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Nhập email"
+              required
             />
           </div>
           <div className="field-group">
@@ -57,27 +67,36 @@ export default function Register() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Nhập họ và tên"
+              required
             />
           </div>
           <div className="field-group">
             <label>Mật khẩu</label>
             <input
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Nhập mật khẩu"
+              minLength={6}
+              required
             />
           </div>
           <div className="field-group">
             <label>Nhập lại mật khẩu</label>
             <input
               type="password"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Nhập lại mật khẩu"
+              minLength={6}
+              required
             />
           </div>
-          <button type="submit" className="btn">Đăng ký</button>
+          <button type="submit" className="btn" disabled={isSubmitting}>
+            {isSubmitting ? "Đang đăng ký..." : "Đăng ký"}
+          </button>
         </form>
 
         {/* Class riêng để căn giữa link đăng nhập ở trang đăng ký. */}

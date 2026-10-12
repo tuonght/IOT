@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { mockProfile } from "../mockData";
+import { api } from "../api";
 
 export default function Topbar() {
   const [open, setOpen] = useState(false);
@@ -8,7 +8,7 @@ export default function Topbar() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const username = mockProfile.username || "Nguyễn Tường";
+  const username = localStorage.getItem("username") || "User";
   const initial = username.charAt(0).toUpperCase();
 
   // Đăng ký listener khi mount và gỡ listener khi unmount để tránh rò sự kiện.
@@ -23,10 +23,17 @@ export default function Topbar() {
   }, []);
 
   // Xóa cờ đăng nhập rồi chuyển về trang Login.
-  function handleLogout() {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("username");
-    navigate("/login");
+  async function handleLogout() {
+    try {
+      await api.logout();
+    } catch (error) {
+      console.error("Logout request failed", error);
+    } finally {
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("username");
+      localStorage.removeItem("email");
+      navigate("/login", { replace: true });
+    }
   }
 
   return (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../api";
 import "./Auth.css";
 import "./ForgotPassword.css";
 
@@ -8,9 +9,9 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
- 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!email.trim()) {
       setError("Vui lòng nhập email hoặc tài khoản.");
@@ -18,8 +19,15 @@ export default function ForgotPassword() {
     }
 
     setError("");
-   
-    setSent(true);
+    setIsSubmitting(true);
+    try {
+      await api.forgotPassword({ email });
+      setSent(true);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -31,21 +39,23 @@ export default function ForgotPassword() {
         {/* Sau khi gửi thì hiện thông báo; trước đó hiện form nhập email. */}
         {sent ? (
           <div className="forgot-password-success">
-            Đã gửi hướng dẫn đặt lại mật khẩu (dữ liệu mẫu). Kiểm tra email của bạn.
+            Đã gửi hướng dẫn đặt lại mật khẩu. Kiểm tra email của bạn.
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
             {error && <div className="error-text">{error}</div>}
             <div className="field-group">
-              <label>Email / Tài khoản</label>
+              <label>Email</label>
               <input
-                type="text"
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Nhập email hoặc tài khoản"
               />
             </div>
-            <button type="submit" className="btn">Gửi yêu cầu</button>
+            <button type="submit" className="btn" disabled={isSubmitting}>
+              {isSubmitting ? "Đang gửi..." : "Gửi yêu cầu"}
+            </button>
           </form>
         )}
 

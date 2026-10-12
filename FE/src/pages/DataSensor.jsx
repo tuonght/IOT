@@ -1,10 +1,12 @@
-import { useMemo, useState } from "react";
-import { mockSensorData } from "../mockData";
+import { useEffect, useMemo, useState } from "react";
+import { api } from "../api";
 import "./DataSensor.css";
 
 const SENSOR_TYPES = ["Nhiệt độ", "Độ ẩm", "Ánh sáng"];
 
 export default function DataSensor() {
+  const [sensorData, setSensorData] = useState([]);
+  const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [sensorType, setSensorType] = useState("all");
   const [sortOrder, setSortOrder] = useState("");
@@ -18,6 +20,28 @@ export default function DataSensor() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function refreshSensorData() {
+      try {
+        const rows = await api.sensorData();
+        if (mounted) {
+          setSensorData(rows || []);
+          setError("");
+        }
+      } catch (requestError) {
+        if (mounted) setError(requestError.message);
+      }
+    }
+
+    refreshSensorData();
+    const intervalId = window.setInterval(refreshSensorData, 3000);
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const searchPlaceholder =
     sensorType === "time"
@@ -47,8 +71,7 @@ export default function DataSensor() {
 
  
   const filteredData = useMemo(() => {
-    // ban sao
-    let result = [...mockSensorData];
+    let result = [...sensorData];
 
     
     if (activeFilters.type !== "all" && activeFilters.type !== "time") {
@@ -80,7 +103,7 @@ export default function DataSensor() {
     }
 
     return result;
-  }, [activeFilters]);
+  }, [activeFilters, sensorData]);
 
   // Tính tổng số trang rồi cắt đúng đoạn bản ghi cần render.
   const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
@@ -101,6 +124,7 @@ export default function DataSensor() {
     <div className="data-sensor-page">
      
       <div className="sensor-page-title">Data Sensor</div>
+      {error && <div className="error-text">{error}</div>}
       <div className="sensor-filters">
         <select
           aria-label="Loại cảm biến"
@@ -167,7 +191,7 @@ export default function DataSensor() {
                     <td>{row.id}</td>
                     <td>{row.type}</td>
                     <td>{row.value}</td>
-                    <td>{row.time}</td>
+                    <td>{row.time?.replace("T", " ")}</td>
                   </tr>
                 ))
               ) : (
