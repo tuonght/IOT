@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import PasswordInput from "../components/PasswordInput";
 import "./ChangePassword.css";
 
-export default function ChangePassword({ onBack, onLogout }) {
-  const navigate = useNavigate();
+export default function ChangePassword({ onBack }) {
   // Gom ba ô mật khẩu vào một object state để cập nhật theo name input.
   const [formData, setFormData] = useState({
     currentPassword: "",
@@ -22,6 +21,7 @@ export default function ChangePassword({ onBack, onLogout }) {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError(""); // Xóa thông báo lỗi khi người dùng gõ lại
+    setSuccess(false);
   }
 
   // Validate các điều kiện trước khi đánh dấu thao tác thành công.
@@ -34,41 +34,16 @@ export default function ChangePassword({ onBack, onLogout }) {
       return;
     }
 
-    // 2. Kiểm tra độ dài tối thiểu
-    if (formData.newPassword.length < 6) {
-      setError("Mật khẩu mới phải có ít nhất 6 ký tự.");
-      return;
-    }
-
-    // 3. Kiểm tra mật khẩu mới không được trùng mật khẩu cũ
-    if (formData.currentPassword === formData.newPassword) {
-      setError("Mật khẩu mới không được trùng với mật khẩu hiện tại.");
-      return;
-    }
-
-    // 4. Kiểm tra khớp mật khẩu xác nhận
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError("Mật khẩu xác nhận không khớp!");
-      return;
-    }
-
     setError("");
     setIsSubmitting(true);
     try {
       await api.changePassword({
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
       });
       setSuccess(true);
-      await api.logout();
-      if (onLogout) {
-        onLogout();
-      } else {
-        localStorage.removeItem("isLoggedIn");
-        localStorage.removeItem("email");
-        localStorage.removeItem("username");
-        navigate("/login");
-      }
+      setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -103,8 +78,7 @@ export default function ChangePassword({ onBack, onLogout }) {
             <label className="change-password-label">
               Mật khẩu hiện tại
             </label>
-            <input
-              type="password"
+            <PasswordInput
               name="currentPassword"
               placeholder="Nhập mật khẩu cũ"
               value={formData.currentPassword}
@@ -116,8 +90,7 @@ export default function ChangePassword({ onBack, onLogout }) {
             <label className="change-password-label">
               Mật khẩu mới
             </label>
-            <input
-              type="password"
+            <PasswordInput
               name="newPassword"
               placeholder="Tối thiểu 6 ký tự"
               value={formData.newPassword}
@@ -129,8 +102,7 @@ export default function ChangePassword({ onBack, onLogout }) {
             <label className="change-password-label">
               Xác nhận mật khẩu mới
             </label>
-            <input
-              type="password"
+            <PasswordInput
               name="confirmPassword"
               placeholder="Nhập lại mật khẩu mới"
               value={formData.confirmPassword}

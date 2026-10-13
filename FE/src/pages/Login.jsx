@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { api } from "../api";
+import PasswordInput from "../components/PasswordInput";
 import "./Auth.css";
 
 export default function Login() {
@@ -63,8 +64,7 @@ export default function Login() {
           </div>
           <div className="field-group">
             <label>Mật khẩu</label>
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

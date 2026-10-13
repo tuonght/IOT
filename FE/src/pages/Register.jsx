@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../api";
+import PasswordInput from "../components/PasswordInput";
 import "./Auth.css";
 import "./Register.css";
 
@@ -30,7 +31,17 @@ export default function Register() {
     setIsSubmitting(true);
     try {
       await api.register({ email: Email, username, password });
-      navigate("/login");
+      try {
+        const user = await api.login({ email: Email, password });
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("email", user.email);
+        localStorage.setItem("username", user.username);
+        navigate("/dashboard");
+      } catch (loginError) {
+        setError(
+          `Tài khoản đã được tạo nhưng đăng nhập tự động thất bại: ${loginError.message}. Vui lòng đăng nhập thủ công.`
+        );
+      }
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -72,8 +83,7 @@ export default function Register() {
           </div>
           <div className="field-group">
             <label>Mật khẩu</label>
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -84,8 +94,7 @@ export default function Register() {
           </div>
           <div className="field-group">
             <label>Nhập lại mật khẩu</label>
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

@@ -5,31 +5,32 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
 export default function Layout() {
-  const [session, setSession] = useState("checking");
+  const [authStatus, setAuthStatus] = useState("checking");
 
   useEffect(() => {
     let mounted = true;
-    api.currentSession()
+    api.currentUser()
       .then((user) => {
         if (!mounted) return;
         localStorage.setItem("email", user.email);
         localStorage.setItem("username", user.username);
-        setSession("authenticated");
+        setAuthStatus("authenticated");
       })
       .catch(() => {
         if (!mounted) return;
         localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("authToken");
         localStorage.removeItem("email");
         localStorage.removeItem("username");
-        setSession("unauthenticated");
+        setAuthStatus("unauthenticated");
       });
     return () => { mounted = false; };
   }, []);
 
-  if (session === "checking") {
-    return <div className="page-title">Đang kiểm tra phiên đăng nhập...</div>;
+  if (authStatus === "checking") {
+    return <div className="page-title">Đang kiểm tra đăng nhập...</div>;
   }
-  if (session !== "authenticated") return <Navigate to="/login" replace />;
+  if (authStatus !== "authenticated") return <Navigate to="/login" replace />;
 
   return (
     // app-shell là khung flex chung chứa Sidebar và phần nội dung bên phải.

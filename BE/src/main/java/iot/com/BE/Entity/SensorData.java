@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "SensorData", indexes = {
+@Table(name = "`SensorData`", indexes = {
     @Index(name = "idx_sensor_measured", columnList = "sensor_id, measured_at")
 })
 public class SensorData {

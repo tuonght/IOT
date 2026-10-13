@@ -30,6 +30,7 @@ export default function Topbar() {
       console.error("Logout request failed", error);
     } finally {
       localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("authToken");
       localStorage.removeItem("username");
       localStorage.removeItem("email");
       navigate("/login", { replace: true });

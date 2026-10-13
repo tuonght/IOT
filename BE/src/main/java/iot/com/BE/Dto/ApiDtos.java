@@ -2,6 +2,7 @@ package iot.com.BE.Dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -25,9 +26,13 @@ public final class ApiDtos {
     public record AuthResponse(Long id, String email, String username) {
     }
 
+    public record LoginResponse(Long id, String email, String username, String token) {
+    }
+
     public record PasswordChangeRequest(
             @NotBlank String currentPassword,
-            @NotBlank @Size(min = 6, max = 72) String newPassword) {
+            @NotBlank String newPassword,
+            @NotBlank String confirmPassword) {
     }
 
     public record ForgotPasswordRequest(@NotBlank @Email String email) {
@@ -82,6 +87,10 @@ public final class ApiDtos {
     public record DeviceDto(Long id, String code, String name, String status) {
     }
 
+    public record DeviceStatusUpdateDto(
+            Long id, String status, Boolean commandSucceeded, String commandAction) {
+    }
+
     public record DeviceActionRequest(@NotBlank String action) {
     }
 
@@ -95,5 +104,13 @@ public final class ApiDtos {
             String action,
             String status,
             LocalDateTime time) {
+    }
+
+    public record PagedResponse<T>(
+            List<T> content,
+            int page,
+            int size,
+            long totalElements,
+            int totalPages) {
     }
 }

@@ -48,10 +48,23 @@ public class AuthService {
     }
 
     @Transactional
-    public void changePassword(String email, String currentPassword, String newPassword) {
+    public void changePassword(
+            String email, String currentPassword, String newPassword, String confirmPassword) {
         User user = findUser(email);
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không đúng.");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Mật khẩu xác nhận không khớp.");
+        }
+        if (newPassword.length() < 6 || newPassword.length() > 72) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Mật khẩu mới phải có từ 6 đến 72 ký tự.");
+        }
+        if (currentPassword.equals(newPassword)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Mật khẩu mới không được trùng với mật khẩu hiện tại.");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         users.save(user);

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
+import PasswordInput from "../components/PasswordInput";
 import "./Auth.css";
 
 export default function ResetPassword() {
@@ -48,8 +49,7 @@ export default function ResetPassword() {
         <form onSubmit={handleSubmit}>
           <div className="field-group">
             <label>Mật khẩu mới</label>
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -59,8 +59,7 @@ export default function ResetPassword() {
           </div>
           <div className="field-group">
             <label>Xác nhận mật khẩu mới</label>
-            <input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}

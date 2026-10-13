@@ -12,22 +12,23 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpServletRequest;
 import iot.com.BE.Dto.ApiDtos.DeviceActionRequest;
 import iot.com.BE.Dto.ApiDtos.DeviceDto;
 import iot.com.BE.Dto.ApiDtos.HistoryDto;
+import iot.com.BE.Service.AuthenticatedUserService;
 import iot.com.BE.Service.DeviceService;
-import iot.com.BE.Service.SessionAuthService;
 
 @RestController
 @RequestMapping("/api/devices")
 public class DeviceController {
     private final DeviceService deviceService;
-    private final SessionAuthService sessionAuthService;
+    private final AuthenticatedUserService authenticatedUserService;
 
-    public DeviceController(DeviceService deviceService, SessionAuthService sessionAuthService) {
+    public DeviceController(
+            DeviceService deviceService, AuthenticatedUserService authenticatedUserService) {
         this.deviceService = deviceService;
-        this.sessionAuthService = sessionAuthService;
+        this.authenticatedUserService = authenticatedUserService;
     }
 
     @GetMapping
@@ -40,8 +41,8 @@ public class DeviceController {
     public HistoryDto command(
             @PathVariable Long id,
             @Valid @RequestBody DeviceActionRequest request,
-            HttpSession session) {
+            HttpServletRequest httpRequest) {
         return deviceService.command(
-                id, request.action(), sessionAuthService.requireEmail(session));
+                id, request.action(), authenticatedUserService.requireEmail(httpRequest));
     }
 }

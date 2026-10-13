@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "../api";
+import { api, apiAssetUrl } from "../api";
 import "./Profile.css";
 const EMPTY_TEXT = "--- ";
 
@@ -23,6 +23,8 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
 
   const fields = [
     { key: "username", label: "Họ và Tên" },
@@ -33,7 +35,6 @@ export default function Profile() {
     { key: "pdfLink", label: "PDF Link" },
     { key: "apiDocs", label: "Postman" },
     { key: "figma", label: "Figma" },
-    { key: "avatar", label: "Avatar URL" },
   ];
 
   useEffect(() => {
@@ -74,7 +75,10 @@ export default function Profile() {
     setError("");
     setSaved(false);
     try {
-      const updated = await api.updateProfile(draft);
+      let updated = await api.updateProfile({ ...draft, avatar: profile.avatar });
+      if (selectedAvatar) {
+        updated = await api.uploadAvatar(selectedAvatar);
+      }
       const profileData = {
         username: updated.username || "",
         email: updated.email || "",
@@ -88,6 +92,8 @@ export default function Profile() {
       };
       setProfile(profileData);
       setDraft(profileData);
+      setSelectedAvatar(null);
+      setAvatarPreview("");
       localStorage.setItem("email", profileData.email);
       localStorage.setItem("username", profileData.username);
       setIsEditing(false);
@@ -99,7 +105,40 @@ export default function Profile() {
     }
   }
 
+  function handleAvatarChange(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/gif"].includes(file.type)) {
+      setError("Chỉ hỗ trợ ảnh JPG, PNG hoặc GIF.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Ảnh đại diện không được lớn hơn 5 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        setError("Không thể đọc ảnh đã chọn.");
+        return;
+      }
+      setError("");
+      setSelectedAvatar(file);
+      setAvatarPreview(reader.result);
+    };
+    reader.onerror = () => setError("Không thể đọc ảnh đã chọn.");
+    reader.readAsDataURL(file);
+  }
+
   const getDisplayValue = (value) => (value && value.trim() ? value : EMPTY_TEXT);
+  const normalizedAvatarPath = profile.avatar?.replace(
+    /^\/api\/profile\/avatar\//,
+    "/uploads/"
+  );
+  const savedAvatarUrl = normalizedAvatarPath?.startsWith("/")
+    ? apiAssetUrl(normalizedAvatarPath)
+    : normalizedAvatarPath;
 
   if (isLoading) return <div className="page-title">Đang tải hồ sơ...</div>;
 
@@ -107,18 +146,28 @@ export default function Profile() {
     <div>
       <div className="page-title">My Profile</div>
       {error && <div className="error-text">{error}</div>}
-      {saved && <div className="success-text">Đã cập nhật hồ sơ.</div>}
       <div className="profile-card">
         <div className="profile-photo-wrap">
           <div className={`profile-photo ${profile.avatar ? "has-image" : ""}`}>
-            {profile.avatar ? (
-              <img src={profile.avatar} alt="Ảnh đại diện" />
+            {avatarPreview || savedAvatarUrl ? (
+              <img src={avatarPreview || savedAvatarUrl} alt="Ảnh đại diện" />
             ) : (
               <span className="profile-photo-placeholder">
                 {(profile.username || "U").charAt(0).toUpperCase()}
               </span>
             )}
           </div>
+          {isEditing && (
+            <label className="photo-upload-btn">
+              + Chọn ảnh từ máy
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif"
+                onChange={handleAvatarChange}
+                aria-label="Chọn ảnh đại diện từ máy"
+              />
+            </label>
+          )}
         </div>
 
         {!isEditing ? (
@@ -135,10 +184,13 @@ export default function Profile() {
                 setDraft(profile);
                 setError("");
                 setSaved(false);
+                setSelectedAvatar(null);
+                setAvatarPreview("");
                 setIsEditing(true);
               }}>
                 Thêm / Sửa
               </button>
+              {saved && <span className="profile-success">Đã cập nhật hồ sơ.</span>}
             </div>
           </div>
         ) : (
@@ -162,8 +214,10 @@ export default function Profile() {
               <button type="button" className="profile-btn" onClick={handleConfirm} disabled={isSaving}>
                 {isSaving ? "Đang lưu..." : "Xác nhận"}
               </button>
-              <button type="button" className="profile-btn" onClick={() => {
+              <button type="button" className="profile-btn profile-btn-cancel" disabled={isSaving} onClick={() => {
                 setDraft(profile);
+                setSelectedAvatar(null);
+                setAvatarPreview("");
                 setIsEditing(false);
               }}>
                 Hủy

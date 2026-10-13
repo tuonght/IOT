@@ -9,62 +9,54 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import iot.com.BE.Dto.ApiDtos.AuthResponse;
 import iot.com.BE.Dto.ApiDtos.ForgotPasswordRequest;
 import iot.com.BE.Dto.ApiDtos.LoginRequest;
+import iot.com.BE.Dto.ApiDtos.LoginResponse;
 import iot.com.BE.Dto.ApiDtos.MessageResponse;
 import iot.com.BE.Dto.ApiDtos.PasswordChangeRequest;
 import iot.com.BE.Dto.ApiDtos.RegisterRequest;
 import iot.com.BE.Dto.ApiDtos.ResetPasswordRequest;
+import iot.com.BE.Service.AuthenticatedUserService;
 import iot.com.BE.Service.AuthService;
+import iot.com.BE.Service.JwtTokenService;
 import iot.com.BE.Service.PasswordResetService;
-import iot.com.BE.Service.SessionAuthService;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
-    private final SessionAuthService sessionAuthService;
+    private final AuthenticatedUserService authenticatedUserService;
+    private final JwtTokenService jwtTokenService;
 
     public AuthController(
             AuthService authService,
             PasswordResetService passwordResetService,
-            SessionAuthService sessionAuthService) {
+            AuthenticatedUserService authenticatedUserService,
+            JwtTokenService jwtTokenService) {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
-        this.sessionAuthService = sessionAuthService;
+        this.authenticatedUserService = authenticatedUserService;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @PostMapping("/login")
-    public AuthResponse login(
-            @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest) {
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         AuthResponse user = authService.login(request);
-        HttpSession previousSession = httpRequest.getSession(false);
-        if (previousSession != null) {
-            previousSession.invalidate();
-        }
-        HttpSession session = httpRequest.getSession(true);
-        session.setAttribute(SessionAuthService.USER_ID_ATTRIBUTE, user.id());
-        session.setAttribute(SessionAuthService.USER_EMAIL_ATTRIBUTE, user.email());
-        return user;
+        return new LoginResponse(
+                user.id(), user.email(), user.username(), jwtTokenService.createToken(user.email()));
     }
 
-    @org.springframework.web.bind.annotation.GetMapping("/session")
-    public AuthResponse currentSession(HttpSession session) {
-        String email = sessionAuthService.requireEmail(session);
+    @org.springframework.web.bind.annotation.GetMapping("/me")
+    public AuthResponse currentUser(HttpServletRequest request) {
+        String email = authenticatedUserService.requireEmail(request);
         return authService.currentUser(email);
     }
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-        if (session != null) {
-            session.invalidate();
-        }
+    public void logout() {
     }
 
     @PostMapping("/register")
@@ -76,12 +68,13 @@ public class AuthController {
     @PostMapping("/change-password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void changePassword(
-            HttpSession session,
-            @Valid @RequestBody PasswordChangeRequest request) {
+            HttpServletRequest httpRequest,
+            @Valid @RequestBody PasswordChangeRequest passwordRequest) {
         authService.changePassword(
-                sessionAuthService.requireEmail(session),
-                request.currentPassword(),
-                request.newPassword());
+                authenticatedUserService.requireEmail(httpRequest),
+                passwordRequest.currentPassword(),
+                passwordRequest.newPassword(),
+                passwordRequest.confirmPassword());
     }
 
     @PostMapping("/forgot-password")

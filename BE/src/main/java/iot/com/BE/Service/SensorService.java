@@ -7,13 +7,21 @@ import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.databind.*;
 
 import iot.com.BE.Dto.ApiDtos.ChartPointDto;
+import iot.com.BE.Dto.ApiDtos.PagedResponse;
 import iot.com.BE.Dto.ApiDtos.SensorDataDto;
 import iot.com.BE.Dto.ApiDtos.SensorLatestDto;
 import iot.com.BE.Entity.Sensor;
@@ -34,14 +42,17 @@ public class SensorService {
     private final ObjectMapper objectMapper;
     private final SensorRepository sensors;
     private final SensorDataRepository readings;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public SensorService(
             ObjectMapper objectMapper,
             SensorRepository sensors,
-            SensorDataRepository readings) {
+            SensorDataRepository readings,
+            SimpMessagingTemplate messagingTemplate) {
         this.objectMapper = objectMapper;
         this.sensors = sensors;
         this.readings = readings;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Transactional
@@ -56,6 +67,9 @@ public class SensorService {
             saveReading("temperature", temperature, measuredAt);
             saveReading("humidity", humidity, measuredAt);
             saveReading("light", light, measuredAt);
+            messagingTemplate.convertAndSend(
+                    "/topic/sensors/live",
+                    new ChartPointDto(measuredAt, temperature, humidity, light));
         } catch (Exception exception) {
             logger.warn("Discarded invalid MQTT sensor payload: {}", exception.getMessage());
         }
@@ -89,25 +103,120 @@ public class SensorService {
             }
         }
 
-        List<ChartPointDto> result = new ArrayList<>();
-        points.forEach((time, values) -> result.add(new ChartPointDto(
-                time, values.get("temperature"), values.get("humidity"), values.get("light"))));
-        return result;
+        return points.entrySet().stream()
+                .skip(Math.max(0, points.size() - 15))
+                .map(entry -> {
+                    Map<String, BigDecimal> values = entry.getValue();
+                    return new ChartPointDto(
+                            entry.getKey(),
+                            values.get("temperature"),
+                            values.get("humidity"),
+                            values.get("light"));
+                })
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<SensorDataDto> recentReadings() {
-        return readings.findAllByOrderByMeasuredAtDesc(PageRequest.of(0, 500)).stream()
-                .map(reading -> {
-                    String code = reading.getSensor().getCode();
-                    String label = SENSOR_LABELS.getOrDefault(code, reading.getSensor().getName());
-                    return new SensorDataDto(
-                            reading.getId(),
-                            label,
-                            reading.getValue().toPlainString() + " " + reading.getSensor().getUnit(),
-                            reading.getMeasuredAt());
-                })
-                .toList();
+    public PagedResponse<SensorDataDto> searchReadings(
+            String type, String query, String sortOrder, int page, int size) {
+        validatePage(page, size);
+        String normalizedType = type == null ? "all" : type.trim().toLowerCase(Locale.ROOT);
+        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        Sort sort = sensorSort(sortOrder);
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Specification<SensorData> specification = sensorSpecification(normalizedType, normalizedQuery);
+        Page<SensorData> result = readings.findAll(specification, pageable);
+        return new PagedResponse<>(
+                result.getContent().stream().map(this::toSensorDataDto).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages());
+    }
+
+    private Specification<SensorData> sensorSpecification(String type, String query) {
+        if (!type.equals("all") && !type.equals("time")
+                && !type.equals("nhiệt độ") && !type.equals("temperature")
+                && !type.equals("độ ẩm") && !type.equals("humidity")
+                && !type.equals("ánh sáng") && !type.equals("light")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Loại cảm biến không hợp lệ.");
+        }
+
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            var sensor = root.join("sensor");
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            String sensorCode = switch (type) {
+                case "nhiệt độ", "temperature" -> "temperature";
+                case "độ ẩm", "humidity" -> "humidity";
+                case "ánh sáng", "light" -> "light";
+                default -> null;
+            };
+            if (sensorCode != null) {
+                predicates.add(criteriaBuilder.equal(
+                        criteriaBuilder.lower(sensor.get("code")), sensorCode));
+            }
+
+            if (!query.isBlank()) {
+                String pattern = "%" + query + "%";
+                var measuredAt = criteriaBuilder.function(
+                        "date_format",
+                        String.class,
+                        root.get("measuredAt"),
+                        criteriaBuilder.literal("%Y-%m-%d %H:%i:%s"));
+                if (type.equals("time")) {
+                    predicates.add(criteriaBuilder.like(measuredAt, pattern));
+                } else if (sensorCode != null) {
+                    var displayValue = criteriaBuilder.concat(
+                            criteriaBuilder.concat(root.get("value").as(String.class), " "),
+                            sensor.get("unit"));
+                    predicates.add(criteriaBuilder.or(
+                            criteriaBuilder.like(criteriaBuilder.lower(displayValue), pattern),
+                            criteriaBuilder.like(measuredAt, pattern)));
+                } else {
+                    var displayValue = criteriaBuilder.concat(
+                            criteriaBuilder.concat(root.get("value").as(String.class), " "),
+                            sensor.get("unit"));
+                    predicates.add(criteriaBuilder.or(
+                            criteriaBuilder.like(criteriaBuilder.lower(sensor.get("name")), pattern),
+                            criteriaBuilder.like(criteriaBuilder.lower(sensor.get("code")), pattern),
+                            criteriaBuilder.like(criteriaBuilder.lower(displayValue), pattern),
+                            criteriaBuilder.like(measuredAt, pattern)));
+                }
+            }
+            return criteriaBuilder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+    }
+
+    private Sort sensorSort(String sortOrder) {
+        String normalized = sortOrder == null ? "" : sortOrder.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return Sort.by(Sort.Order.desc("measuredAt"), Sort.Order.desc("id"));
+        }
+        if (normalized.equals("asc")) {
+            return Sort.by(Sort.Order.asc("value"), Sort.Order.desc("measuredAt"), Sort.Order.desc("id"));
+        }
+        if (normalized.equals("desc")) {
+            return Sort.by(Sort.Order.desc("value"), Sort.Order.desc("measuredAt"), Sort.Order.desc("id"));
+        }
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Thứ tự sắp xếp phải là asc hoặc desc.");
+    }
+
+    private void validatePage(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Trang phải từ 0 và kích thước trang từ 1 đến 100.");
+        }
+    }
+
+    private SensorDataDto toSensorDataDto(SensorData reading) {
+        String code = reading.getSensor().getCode();
+        String label = SENSOR_LABELS.getOrDefault(code, reading.getSensor().getName());
+        return new SensorDataDto(
+                reading.getId(),
+                label,
+                reading.getValue().toPlainString() + " " + reading.getSensor().getUnit(),
+                reading.getMeasuredAt());
     }
 
     private void saveReading(String code, BigDecimal value, LocalDateTime measuredAt) {

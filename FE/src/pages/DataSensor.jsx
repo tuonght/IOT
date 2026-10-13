@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
+import { getPageNumbers } from "../utils/pagination";
 import "./DataSensor.css";
 
 const SENSOR_TYPES = ["Nhiệt độ", "Độ ẩm", "Ánh sáng"];
 
 export default function DataSensor() {
   const [sensorData, setSensorData] = useState([]);
+  const [totalElements, setTotalElements] = useState(0);
   const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [sensorType, setSensorType] = useState("all");
@@ -25,9 +27,16 @@ export default function DataSensor() {
 
     async function refreshSensorData() {
       try {
-        const rows = await api.sensorData();
+        const result = await api.sensorData({
+          type: activeFilters.type,
+          q: activeFilters.query,
+          sort: activeFilters.order,
+          page: currentPage - 1,
+          size: pageSize,
+        });
         if (mounted) {
-          setSensorData(rows || []);
+          setSensorData(result.content || []);
+          setTotalElements(result.totalElements || 0);
           setError("");
         }
       } catch (requestError) {
@@ -41,7 +50,7 @@ export default function DataSensor() {
       mounted = false;
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [activeFilters, currentPage, pageSize]);
 
   const searchPlaceholder =
     sensorType === "time"
@@ -70,55 +79,8 @@ export default function DataSensor() {
   }
 
  
-  const filteredData = useMemo(() => {
-    let result = [...sensorData];
-
-    
-    if (activeFilters.type !== "all" && activeFilters.type !== "time") {
-      result = result.filter((item) => item.type === activeFilters.type);
-    }
-
-    // lọc theo từ khóa
-    if (activeFilters.query) {
-      result = result.filter((item) => {
-        if (activeFilters.type === "time") {
-          return item.time.toLowerCase().includes(activeFilters.query);
-        }
-
-        if (activeFilters.type === "all") {
-          return [item.type, item.value, item.time].some((field) =>
-            field.toLowerCase().includes(activeFilters.query)
-          );
-        }
-
-        return item.value.toLowerCase().includes(activeFilters.query);
-      });
-    }
-
-    
-    if (activeFilters.order === "asc") {
-      result.sort((a, b) => parseFloat(a.value) - parseFloat(b.value));
-    } else if (activeFilters.order === "desc") {
-      result.sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
-    }
-
-    return result;
-  }, [activeFilters, sensorData]);
-
-  // Tính tổng số trang rồi cắt đúng đoạn bản ghi cần render.
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
-  const pageNumbers =
-    totalPages <= 5
-      ? Array.from({ length: totalPages }, (_, index) => index + 1)
-      : currentPage <= 3
-        ? [1, 2, 3, 4, "...", totalPages]
-        : currentPage >= totalPages - 2
-          ? [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
-          : [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
-  const visibleData = filteredData.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
+  const pageNumbers = getPageNumbers(totalPages, currentPage);
 
   return (
     <div className="data-sensor-page">
@@ -171,7 +133,6 @@ export default function DataSensor() {
         </button>
       </div>
 
-      {/* dùng visibleData  */}
       <div className="sensor-table-panel">
         <div className="sensor-table-wrap">
           <table>
@@ -185,8 +146,8 @@ export default function DataSensor() {
             </thead>
             <tbody>
               {/* không có kết quả thì hiển thị một dòng thông báo. */}
-              {visibleData.length > 0 ? (
-                visibleData.map((row) => (
+              {sensorData.length > 0 ? (
+                sensorData.map((row) => (
                   <tr key={row.id}>
                     <td>{row.id}</td>
                     <td>{row.type}</td>
@@ -211,11 +172,11 @@ export default function DataSensor() {
         <div className="sensor-pagination-info">
           <span>
             Hiển thị{" "}
-            {filteredData.length === 0
+            {totalElements === 0
               ? 0
               : (currentPage - 1) * pageSize + 1}
-            -{Math.min(currentPage * pageSize, filteredData.length)} trong tổng{" "}
-            {filteredData.length} kết quả
+            -{Math.min(currentPage * pageSize, totalElements)} trong tổng{" "}
+            {totalElements} kết quả
           </span>
         </div>
         <div className="sensor-page-buttons">

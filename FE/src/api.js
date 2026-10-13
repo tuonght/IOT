@@ -1,13 +1,23 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
+export function apiAssetUrl(path) {
+  return new URL(path, API_URL).toString();
+}
+
 export async function apiRequest(path, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  const token = localStorage.getItem("authToken");
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    credentials: "omit",
+    headers,
   });
 
   const contentType = response.headers.get("content-type") || "";
@@ -23,10 +33,34 @@ export async function apiRequest(path, options = {}) {
   return body;
 }
 
+function withQuery(path, params) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== "" && value !== null && value !== undefined) {
+      searchParams.set(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 export const api = {
-  login: (data) => apiRequest("/auth/login", { method: "POST", body: JSON.stringify(data) }),
-  currentSession: () => apiRequest("/auth/session"),
-  logout: () => apiRequest("/auth/logout", { method: "POST" }),
+  login: async (data) => {
+    const response = await apiRequest("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    localStorage.setItem("authToken", response.token);
+    return response;
+  },
+  currentUser: () => apiRequest("/auth/me"),
+  logout: async () => {
+    try {
+      return await apiRequest("/auth/logout", { method: "POST" });
+    } finally {
+      localStorage.removeItem("authToken");
+    }
+  },
   register: (data) => apiRequest("/auth/register", { method: "POST", body: JSON.stringify(data) }),
   forgotPassword: (data) => apiRequest("/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }),
   resetPassword: (data) => apiRequest("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
@@ -35,8 +69,14 @@ export const api = {
   chartData: () => apiRequest("/dashboard/chart"),
   devices: () => apiRequest("/devices"),
   setDeviceStatus: (id, action) => apiRequest(`/devices/${id}/actions`, { method: "POST", body: JSON.stringify({ action }) }),
-  sensorData: () => apiRequest("/sensors"),
-  history: () => apiRequest("/history"),
+  sensorData: (params) => apiRequest(withQuery("/sensors", params)),
+  history: (params) => apiRequest(withQuery("/history", params)),
+  historyDevices: () => apiRequest("/history/devices"),
   profile: () => apiRequest("/profile"),
   updateProfile: (data) => apiRequest("/profile", { method: "PATCH", body: JSON.stringify(data) }),
+  uploadAvatar: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiRequest("/profile/avatar", { method: "POST", body: formData });
+  },
 };

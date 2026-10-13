@@ -1,9 +1,12 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../api";
+import { getPageNumbers } from "../utils/pagination";
 import "./History.css";
 
 export default function History() {
   const [historyRows, setHistoryRows] = useState([]);
+  const [totalElements, setTotalElements] = useState(0);
+  const [availableDevices, setAvailableDevices] = useState([]);
   const [error, setError] = useState("");
   const [pageSize, setPageSize] = useState(10);
   // Giá trị hiện tại người dùng chọn hoặc gõ trong các ô lọc.
@@ -27,9 +30,17 @@ export default function History() {
 
     async function refreshHistory() {
       try {
-        const rows = await api.history();
+        const result = await api.history({
+          device: activeFilters.device,
+          action: activeFilters.action,
+          status: activeFilters.status,
+          time: activeFilters.time,
+          page: currentPage - 1,
+          size: pageSize,
+        });
         if (mounted) {
-          setHistoryRows(rows || []);
+          setHistoryRows(result.content || []);
+          setTotalElements(result.totalElements || 0);
           setError("");
         }
       } catch (requestError) {
@@ -43,6 +54,18 @@ export default function History() {
       mounted = false;
       window.clearInterval(intervalId);
     };
+  }, [activeFilters, currentPage, pageSize]);
+
+  useEffect(() => {
+    let mounted = true;
+    api.historyDevices()
+      .then((devices) => {
+        if (mounted) setAvailableDevices(devices || []);
+      })
+      .catch((requestError) => {
+        if (mounted) setError(requestError.message);
+      });
+    return () => { mounted = false; };
   }, []);
 
   function handleSearch() {
@@ -71,43 +94,8 @@ export default function History() {
   }
 
   
-  const filteredHistory = useMemo(() => {
-    return historyRows.filter((row) => {
-      const matchDevice = activeFilters.device
-        ? row.device.toLowerCase() === activeFilters.device.toLowerCase()
-        : true;
-
-      const matchAction = activeFilters.action
-        ? row.action.toLowerCase() === activeFilters.action.toLowerCase()
-        : true;
-
-      const matchStatus = activeFilters.status
-        ? row.status.toLowerCase() === activeFilters.status.toLowerCase()
-        : true;
-
-      
-      const matchTime = activeFilters.time
-        ? row.time?.replace("T", " ").toLowerCase().includes(activeFilters.time)
-        : true;
-
-      return matchDevice && matchAction && matchStatus && matchTime;
-    });
-  }, [activeFilters, historyRows]);
-  const availableDevices = [...new Set(historyRows.map((row) => row.device))];
-
-  const totalPages = Math.max(1, Math.ceil(filteredHistory.length / pageSize));
-  const pageNumbers =
-    totalPages <= 5
-      ? Array.from({ length: totalPages }, (_, index) => index + 1)
-      : currentPage <= 3
-        ? [1, 2, 3, 4, "...", totalPages]
-        : currentPage >= totalPages - 2
-          ? [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
-          : [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
-  const visibleHistory = filteredHistory.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
+  const pageNumbers = getPageNumbers(totalPages, currentPage);
 
   return (
     <div className="history-page">
@@ -176,8 +164,8 @@ export default function History() {
             </thead>
             <tbody>
               {/* kết quả thì */}
-              {visibleHistory.length > 0 ? (
-                visibleHistory.map((row) => (
+              {historyRows.length > 0 ? (
+                historyRows.map((row) => (
                   <tr key={row.id}>
                     <td>{row.id}</td>
                     <td>{row.device}</td>
@@ -210,8 +198,8 @@ export default function History() {
       {/* Bộ đếm kết quả và các nút phân trang. */}
       <div className="pagination">
         <div className="history-pagination-info">
-          Hiển thị {filteredHistory.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
-          -{Math.min(currentPage * pageSize, filteredHistory.length)} trong tổng {filteredHistory.length} kết quả
+          Hiển thị {totalElements === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+          -{Math.min(currentPage * pageSize, totalElements)} trong tổng {totalElements} kết quả
         </div>
         <div className="pg-btns">
           <label className="history-page-size">

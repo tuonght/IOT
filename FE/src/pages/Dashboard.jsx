@@ -36,13 +36,15 @@ export default function Dashboard() {
   const [devices, setDevices] = useState([]);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState("");
-  const [socketConnected, setSocketConnected] = useState(false);
+
+  function showToast(type, message) {
+    setToast({ type, message });
+    window.setTimeout(() => setToast(null), 3000);
+  }
 
   useEffect(() => {
     let mounted = true;
-    const client = connectStomp((isConnected) => {
-      if (mounted) setSocketConnected(isConnected);
-    });
+    const client = connectStomp(() => {});
     const unsubscribeSensors = client.subscribe("/topic/sensors/live", (point) => {
       if (!mounted) return;
       setSensor({
@@ -56,33 +58,54 @@ export default function Dashboard() {
         const next = existing < 0
           ? [...current, point]
           : current.map((item, index) => index === existing ? point : item);
-        return next.sort((a, b) => a.time.localeCompare(b.time)).slice(-150);
+        return next.sort((a, b) => a.time.localeCompare(b.time)).slice(-15);
       });
     });
 
     async function loadDashboard() {
-      try {
-        const [latest, chart, currentDevices] = await Promise.all([
-          api.latestSensor(),
-          api.chartData(),
-          api.devices(),
-        ]);
-        if (!mounted) return;
-        setSensor(latest || EMPTY_SENSOR);
-        setChartData(chart || []);
-        setDevices(currentDevices || []);
+      const [latestResult, chartResult, devicesResult] = await Promise.allSettled([
+        api.latestSensor(),
+        api.chartData(),
+        api.devices(),
+      ]);
+      if (!mounted) return;
+
+      const errors = [];
+      if (latestResult.status === "fulfilled") {
+        setSensor(latestResult.value || EMPTY_SENSOR);
+      } else {
+        errors.push(`Dữ liệu cảm biến mới nhất: ${latestResult.reason.message}`);
+      }
+
+      if (chartResult.status === "fulfilled") {
+        setChartData(chartResult.value || []);
+      } else {
+        errors.push(`Biểu đồ cảm biến: ${chartResult.reason.message}`);
+      }
+
+      if (devicesResult.status === "fulfilled") {
+        const currentDevices = devicesResult.value || [];
+        setDevices(currentDevices);
         currentDevices.forEach((device) => {
           client.subscribe(`/topic/devices/${device.id}/status`, (update) => {
             if (!mounted) return;
             setDevices((current) => current.map((item) =>
               item.id === update.id ? { ...item, status: update.status } : item
             ));
+            if (update.commandSucceeded === true) {
+              const actionText = update.commandAction === "ON" ? "bật" : "tắt";
+              showToast("success", `${device.name} đã ${actionText} thành công.`);
+            } else if (update.commandSucceeded === false) {
+              const actionText = update.commandAction === "ON" ? "bật" : "tắt";
+              showToast("error", `${device.name} đã ${actionText} thất bại.`);
+            }
           });
         });
-        setError("");
-      } catch (requestError) {
-        if (mounted) setError(requestError.message);
+      } else {
+        errors.push(`Danh sách thiết bị: ${devicesResult.reason.message}`);
       }
+
+      setError(errors.join(" • "));
     }
 
     loadDashboard();
@@ -93,11 +116,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  function showToast(type, message) {
-    setToast({ type, message });
-    window.setTimeout(() => setToast(null), 3000);
-  }
-
   async function toggleDevice(device, action) {
     const previousStatus = device.status;
     setDevices((current) => current.map((item) =>
@@ -106,12 +124,12 @@ export default function Dashboard() {
 
     try {
       await api.setDeviceStatus(device.id, action);
-      showToast("success", `Đã gửi lệnh ${action}; đang chờ thiết bị phản hồi.`);
     } catch (requestError) {
       setDevices((current) => current.map((item) =>
         item.id === device.id ? { ...item, status: previousStatus } : item
       ));
-      showToast("error", requestError.message);
+      const actionText = action === "ON" ? "bật" : "tắt";
+      showToast("error", `${device.name} đã ${actionText} thất bại. ${requestError.message}`);
     }
   }
 
@@ -119,9 +137,6 @@ export default function Dashboard() {
     <div>
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
       <div className="page-title">Dashboard</div>
-      <div className="sensor-updated-at" aria-live="polite">
-        Live updates: {socketConnected ? "Connected" : "Connecting..."}
-      </div>
       {error && <div className="error-text">{error}</div>}
 
       <div className="metrics">
@@ -172,11 +187,12 @@ export default function Dashboard() {
         </div>
 
         <div className="device-list">
+          <div className="panel-title">Thiết bị</div>
           {devices.map((device) => (
             <div className="device-card" key={device.id}>
               <div className="device-top">
                 <span className="device-name">{device.name}</span>
-                <span className={`device-state ${device.status.toLowerCase()}`}>
+                <span className={`device-state ${device.status.toLowerCase()}`} aria-live="polite">
                   {device.status}
                 </span>
               </div>

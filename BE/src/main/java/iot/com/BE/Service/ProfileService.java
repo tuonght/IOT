@@ -1,5 +1,6 @@
 package iot.com.BE.Service;
 
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,10 +13,13 @@ import iot.com.BE.Repository.UserRepository;
 public class ProfileService {
     private final AuthService authService;
     private final UserRepository users;
+    private final AvatarStorageService avatars;
 
-    public ProfileService(AuthService authService, UserRepository users) {
+    public ProfileService(
+            AuthService authService, UserRepository users, AvatarStorageService avatars) {
         this.authService = authService;
         this.users = users;
+        this.avatars = avatars;
     }
 
     @Transactional(readOnly = true)
@@ -45,6 +49,13 @@ public class ProfileService {
         if (request.apiDocs() != null) user.setPostmanLink(request.apiDocs());
         if (request.figma() != null) user.setFigmaLink(request.figma());
         if (request.avatar() != null) user.setAvatarUrl(request.avatar());
+        return toDto(users.save(user));
+    }
+
+    @Transactional
+    public ProfileDto updateAvatar(String email, MultipartFile file) {
+        User user = authService.findUser(email);
+        user.setAvatarUrl("/uploads/" + avatars.store(file));
         return toDto(users.save(user));
     }
 
