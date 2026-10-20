@@ -1,8 +1,11 @@
 package iot.com.BE.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+
+import jakarta.persistence.criteria.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,15 +24,22 @@ import org.springframework.web.server.ResponseStatusException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import iot.com.BE.Dto.*;        
-import iot.com.BE.Dto.ApiDtos.*;
+import iot.com.BE.Dto.ApiDtos.DeviceDto;
 import iot.com.BE.Dto.ApiDtos.DeviceStatusUpdateDto;
-import iot.com.BE.Entity.*;
-import iot.com.BE.Repository.*;
+import iot.com.BE.Dto.ApiDtos.HistoryDto;
+import iot.com.BE.Dto.ApiDtos.PagedResponse;
+import iot.com.BE.Entity.ActionStatus;
+import iot.com.BE.Entity.Device;
+import iot.com.BE.Entity.History;
+import iot.com.BE.Repository.DeviceRepository;
+import iot.com.BE.Repository.HistoryRepository;
+import iot.com.BE.Repository.UserRepository;
+import iot.com.BE.Util.TimeSearchRange;
+
 @Service
 public class DeviceService {
     private static final Logger logger = LoggerFactory.getLogger(DeviceService.class);
-    private static final int COMMAND_TIMEOUT_SECONDS = 2;
+    private static final int COMMAND_TIMEOUT_SECONDS = 10;
 
     private final DeviceRepository devices;
     private final HistoryRepository histories;
@@ -106,6 +116,7 @@ public class DeviceService {
                 String[] parts = rawDevice.trim().split("\\s+");
                 rawStatus = parts.length > 1 ? parts[1] : "";
             }
+
             String status = rawStatus.trim().toUpperCase(Locale.ROOT);
             if (!status.equals("ON") && !status.equals("OFF")) {
                 logger.warn("Ignoring MQTT device status with invalid status '{}'", rawStatus);
@@ -148,7 +159,8 @@ public class DeviceService {
         ActionStatus normalizedStatus = parseStatus(status);
         String normalizedDevice = device == null ? "" : device.trim().toLowerCase(Locale.ROOT);
         String normalizedAction = action == null ? "" : action.trim().toUpperCase(Locale.ROOT);
-        String normalizedTime = time == null ? "" : time.trim();
+        String normalizedTime = time == null ? "" : time.trim().replaceAll("\\s+", " ");
+        var timeRange = TimeSearchRange.parse(normalizedTime);
         if (!normalizedAction.isBlank()
                 && !normalizedAction.equals("ON")
                 && !normalizedAction.equals("OFF")) {
@@ -156,7 +168,7 @@ public class DeviceService {
         }
 
         Specification<History> specification = (root, criteriaQuery, criteriaBuilder) -> {
-            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>();
             if (!normalizedDevice.isBlank()) {
                 predicates.add(criteriaBuilder.equal(
                         criteriaBuilder.lower(root.join("device").get("name")), normalizedDevice));
@@ -168,16 +180,25 @@ public class DeviceService {
                 predicates.add(criteriaBuilder.equal(root.get("status"), normalizedStatus));
             }
             if (!normalizedTime.isBlank()) {
-                var requestedAt = criteriaBuilder.function(
-                        "date_format",
-                        String.class,
-                        root.get("requestedAt"),
-                        criteriaBuilder.literal("%Y-%m-%d %H:%i:%s"));
-                predicates.add(criteriaBuilder.like(
-                        requestedAt, "%" + normalizedTime.toLowerCase(Locale.ROOT) + "%"));
+                if (timeRange.isPresent()) {
+                    TimeSearchRange range = timeRange.get();
+                    var requestedAt = root.<LocalDateTime>get("requestedAt");
+                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(
+                            requestedAt, range.startInclusive()));
+                    predicates.add(criteriaBuilder.lessThan(
+                            requestedAt, range.endExclusive()));
+                } else {
+                    var requestedAt = criteriaBuilder.function(
+                            "date_format",
+                            String.class,
+                            root.get("requestedAt"),
+                            criteriaBuilder.literal("%Y-%m-%d %H:%i:%s"));
+                    predicates.add(criteriaBuilder.like(
+                            requestedAt, "%" + normalizedTime.toLowerCase(Locale.ROOT) + "%"));
+                }
             }
             return criteriaBuilder.and(
-                    predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+                    predicates.toArray(Predicate[]::new));
         };
 
         Pageable pageable = PageRequest.of(

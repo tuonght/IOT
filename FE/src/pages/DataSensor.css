@@ -42,11 +42,9 @@
   flex: 1 1 240px;
 }
 
-/* Viền màu xanh */
-.data-sensor-page .sensor-filters select:focus,
 .data-sensor-page .sensor-filters input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--ink);
 }
 
 /* Nút tìm kiếm  */

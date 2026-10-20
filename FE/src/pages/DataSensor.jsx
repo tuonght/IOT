@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import CopyableTime from "../components/CopyableTime";
 import { getPageNumbers } from "../utils/pagination";
 import "./DataSensor.css";
 
@@ -54,9 +55,9 @@ export default function DataSensor() {
 
   const searchPlaceholder =
     sensorType === "time"
-      ? "Tìm theo thời gian..."
+      ? "Tìm kiếm theo thời gian VD: 2026-05-10 19:55:32"
       : sensorType === "all"
-        ? "Tìm theo loại, giá trị hoặc thời gian..."
+        ? "Tìm theo loại, giá trị hoặc thời gian VD: 2026-05-10 19:55:32"
         : `Tìm theo giá trị ${sensorType.toLowerCase()}...`;
 
   
@@ -64,7 +65,7 @@ export default function DataSensor() {
     setActiveFilters({
       type: sensorType,
       order: sortOrder,
-      query: searchInput.trim().toLowerCase(),
+      query: searchInput.replace(/\s+/g, " ").trim().toLowerCase(),
     });
     setCurrentPage(1);
   }
@@ -152,7 +153,7 @@ export default function DataSensor() {
                     <td>{row.id}</td>
                     <td>{row.type}</td>
                     <td>{row.value}</td>
-                    <td>{row.time?.replace("T", " ")}</td>
+                    <td><CopyableTime value={row.time} /></td>
                   </tr>
                 ))
               ) : (

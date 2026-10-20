@@ -25,7 +25,7 @@ public class MqttMessageHandler {
         this.sensorService = sensorService;
         this.deviceService = deviceService;
     }
-
+    // Lắng nghe MQTT
     @EventListener
     public void handle(MqttInboundEvent event) {
         if (sensorTopic.equals(event.topic())) {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../api";
+import CopyableTime from "../components/CopyableTime";
 import { getPageNumbers } from "../utils/pagination";
 import "./History.css";
 
@@ -73,7 +74,7 @@ export default function History() {
       device: deviceFilter,
       action: actionFilter,
       status: statusFilter,
-      time: timeInput.trim().toLowerCase(),
+      time: timeInput.replace(/\s+/g, " ").trim().toLowerCase(),
     });
     setCurrentPage(1);
   }
@@ -134,7 +135,7 @@ export default function History() {
 
         <input
           type="text"
-          placeholder="2026-08-19 10:30:00"
+          placeholder="Tìm kiếm theo thời gian VD: 2026-05-10 19:55:32"
           value={timeInput}
           onChange={(e) => setTimeInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -180,7 +181,7 @@ export default function History() {
                         {row.status}
                       </span>
                     </td>
-                    <td>{row.time?.replace("T", " ")}</td>
+                    <td><CopyableTime value={row.time} /></td>
                   </tr>
                 ))
               ) : (

@@ -64,6 +64,12 @@ Ví dụ: `/api/history?device=Đèn%201&action=ON&status=SUCCESS&page=0&size=10
 `action` nhận `ON`/`OFF`; `status` nhận `LOADING`, `SUCCESS` hoặc `FAILED`.
 `time` tìm chuỗi con trong thời gian yêu cầu.
 
+`GET /api/dashboard/chart` nhận query parameter `sensor`: `all` (mặc định),
+`temperature`, `humidity` hoặc `light`. Ví dụ:
+`/api/dashboard/chart?sensor=temperature`. Chọn `all` trả cả ba loại số đo;
+chọn một cảm biến trả tối đa 15 số đo gần nhất của cảm biến đó, mỗi điểm chỉ
+gồm `time` và trường của cảm biến được chọn.
+
 Cả hai endpoint trả kết quả theo trang với cấu trúc `content`, `page` (bắt đầu từ
 0), `size`, `totalElements` và `totalPages`. `size` mặc định là 10 và tối đa 100.
 

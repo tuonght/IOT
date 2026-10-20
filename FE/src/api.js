@@ -66,7 +66,7 @@ export const api = {
   resetPassword: (data) => apiRequest("/auth/reset-password", { method: "POST", body: JSON.stringify(data) }),
   changePassword: (data) => apiRequest("/auth/change-password", { method: "POST", body: JSON.stringify(data) }),
   latestSensor: () => apiRequest("/dashboard/sensor-latest"),
-  chartData: () => apiRequest("/dashboard/chart"),
+  chartData: (sensor = "all") => apiRequest(withQuery("/dashboard/chart", { sensor })),
   devices: () => apiRequest("/devices"),
   setDeviceStatus: (id, action) => apiRequest(`/devices/${id}/actions`, { method: "POST", body: JSON.stringify({ action }) }),
   sensorData: (params) => apiRequest(withQuery("/sensors", params)),

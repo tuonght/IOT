@@ -15,5 +15,7 @@ public interface SensorDataRepository
         extends JpaRepository<SensorData, Long>, JpaSpecificationExecutor<SensorData> {
     List<SensorData> findAllByOrderByMeasuredAtDesc(Pageable pageable);
 
+    List<SensorData> findAllBySensor_CodeOrderByMeasuredAtDesc(String sensorCode, Pageable pageable);
+
     Optional<SensorData> findTopBySensor_CodeOrderByMeasuredAtDesc(String sensorCode);
 }

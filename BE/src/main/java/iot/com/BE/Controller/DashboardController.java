@@ -1,12 +1,13 @@
 package iot.com.BE.Controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import iot.com.BE.Dto.ApiDtos.ChartPointDto;
 import iot.com.BE.Dto.ApiDtos.SensorLatestDto;
 import iot.com.BE.Service.SensorService;
 
@@ -25,7 +26,8 @@ public class DashboardController {
     }
 
     @GetMapping("/chart")
-    public List<ChartPointDto> chart() {
-        return sensorService.chart();
+    public List<Map<String, Object>> chart(
+            @RequestParam(defaultValue = "all") String sensor) {
+        return sensorService.chart(sensor);
     }
 }

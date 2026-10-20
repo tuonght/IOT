@@ -2,8 +2,16 @@ package iot.com.BE.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.*;
-import java.util.*;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
+
+import jakarta.persistence.criteria.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import iot.com.BE.Dto.ApiDtos.ChartPointDto;
 import iot.com.BE.Dto.ApiDtos.PagedResponse;
@@ -28,6 +37,7 @@ import iot.com.BE.Entity.Sensor;
 import iot.com.BE.Entity.SensorData;
 import iot.com.BE.Repository.SensorDataRepository;
 import iot.com.BE.Repository.SensorRepository;
+import iot.com.BE.Util.TimeSearchRange;
 
 @Service
 public class SensorService {
@@ -43,7 +53,7 @@ public class SensorService {
     private final SensorRepository sensors;
     private final SensorDataRepository readings;
     private final SimpMessagingTemplate messagingTemplate;
-
+    // Hàm khởi tạo
     public SensorService(
             ObjectMapper objectMapper,
             SensorRepository sensors,
@@ -56,6 +66,7 @@ public class SensorService {
     }
 
     @Transactional
+    // Hàm xử lý dữ liệu MQTT từ payload
     public void acceptMqttPayload(String payload) {
         try {
             JsonNode body = objectMapper.readTree(payload);
@@ -92,7 +103,24 @@ public class SensorService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChartPointDto> chart() {
+    public List<Map<String, Object>> chart(String sensor) {
+        String normalizedSensor = sensor == null ? "all" : sensor.trim().toLowerCase(Locale.ROOT);
+        if (!normalizedSensor.equals("all") && !SENSOR_LABELS.containsKey(normalizedSensor)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Loại cảm biến phải là all, temperature, humidity hoặc light.");
+        }
+
+        if (!normalizedSensor.equals("all")) {
+            return readings.findAllBySensor_CodeOrderByMeasuredAtDesc(
+                            normalizedSensor, PageRequest.of(0, 15))
+                    .stream()
+                    .map(reading -> chartPointForSensor(reading, normalizedSensor))
+                    .sorted(java.util.Comparator.comparing(
+                            point -> (LocalDateTime) point.get("time")))
+                    .toList();
+        }
+
         List<SensorData> recent = readings.findAllByOrderByMeasuredAtDesc(PageRequest.of(0, 1500));
         Map<LocalDateTime, Map<String, BigDecimal>> points = new TreeMap<>();
         for (SensorData reading : recent) {
@@ -107,21 +135,31 @@ public class SensorService {
                 .skip(Math.max(0, points.size() - 15))
                 .map(entry -> {
                     Map<String, BigDecimal> values = entry.getValue();
-                    return new ChartPointDto(
-                            entry.getKey(),
-                            values.get("temperature"),
-                            values.get("humidity"),
-                            values.get("light"));
+                    Map<String, Object> point = new LinkedHashMap<>();
+                    point.put("time", entry.getKey());
+                    point.put("temperature", values.get("temperature"));
+                    point.put("humidity", values.get("humidity"));
+                    point.put("light", values.get("light"));
+                    return point;
                 })
                 .toList();
     }
 
+    private Map<String, Object> chartPointForSensor(SensorData reading, String sensor) {
+        Map<String, Object> point = new LinkedHashMap<>();
+        point.put("time", reading.getMeasuredAt());
+        point.put(sensor, reading.getValue());
+        return point;
+    }
+    //
     @Transactional(readOnly = true)
     public PagedResponse<SensorDataDto> searchReadings(
             String type, String query, String sortOrder, int page, int size) {
         validatePage(page, size);
         String normalizedType = type == null ? "all" : type.trim().toLowerCase(Locale.ROOT);
-        String normalizedQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        String normalizedQuery = query == null
+                ? ""
+                : query.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
         Sort sort = sensorSort(sortOrder);
         Pageable pageable = PageRequest.of(page, size, sort);
         Specification<SensorData> specification = sensorSpecification(normalizedType, normalizedQuery);
@@ -133,7 +171,7 @@ public class SensorService {
                 result.getTotalElements(),
                 result.getTotalPages());
     }
-
+    // Tạo điều kiện tìm kiếm cho cảm biến
     private Specification<SensorData> sensorSpecification(String type, String query) {
         if (!type.equals("all") && !type.equals("time")
                 && !type.equals("nhiệt độ") && !type.equals("temperature")
@@ -142,9 +180,10 @@ public class SensorService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Loại cảm biến không hợp lệ.");
         }
 
+        var timeRange = TimeSearchRange.parse(query);
         return (root, criteriaQuery, criteriaBuilder) -> {
             var sensor = root.join("sensor");
-            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>();
             String sensorCode = switch (type) {
                 case "nhiệt độ", "temperature" -> "temperature";
                 case "độ ẩm", "humidity" -> "humidity";
@@ -158,32 +197,40 @@ public class SensorService {
 
             if (!query.isBlank()) {
                 String pattern = "%" + query + "%";
-                var measuredAt = criteriaBuilder.function(
-                        "date_format",
-                        String.class,
-                        root.get("measuredAt"),
-                        criteriaBuilder.literal("%Y-%m-%d %H:%i:%s"));
+                jakarta.persistence.criteria.Predicate timeMatch;
+                if (timeRange.isPresent()) {
+                    TimeSearchRange range = timeRange.get();
+                    var measuredAt = root.<LocalDateTime>get("measuredAt");
+                    timeMatch = criteriaBuilder.and(
+                            criteriaBuilder.greaterThanOrEqualTo(measuredAt, range.startInclusive()),
+                            criteriaBuilder.lessThan(measuredAt, range.endExclusive()));
+                } else {
+                    var measuredAt = criteriaBuilder.function(
+                            "date_format",
+                            String.class,
+                            root.get("measuredAt"),
+                            criteriaBuilder.literal("%Y-%m-%d %H:%i:%s"));
+                    timeMatch = criteriaBuilder.like(measuredAt, pattern);
+                }
                 if (type.equals("time")) {
-                    predicates.add(criteriaBuilder.like(measuredAt, pattern));
-                } else if (sensorCode != null) {
-                    var displayValue = criteriaBuilder.concat(
-                            criteriaBuilder.concat(root.get("value").as(String.class), " "),
-                            sensor.get("unit"));
-                    predicates.add(criteriaBuilder.or(
-                            criteriaBuilder.like(criteriaBuilder.lower(displayValue), pattern),
-                            criteriaBuilder.like(measuredAt, pattern)));
+                    predicates.add(timeMatch);
                 } else {
                     var displayValue = criteriaBuilder.concat(
                             criteriaBuilder.concat(root.get("value").as(String.class), " "),
                             sensor.get("unit"));
-                    predicates.add(criteriaBuilder.or(
-                            criteriaBuilder.like(criteriaBuilder.lower(sensor.get("name")), pattern),
-                            criteriaBuilder.like(criteriaBuilder.lower(sensor.get("code")), pattern),
-                            criteriaBuilder.like(criteriaBuilder.lower(displayValue), pattern),
-                            criteriaBuilder.like(measuredAt, pattern)));
+                    if (sensorCode != null) {
+                        predicates.add(criteriaBuilder.like(
+                                criteriaBuilder.lower(displayValue), pattern));
+                    } else {
+                        predicates.add(criteriaBuilder.or(
+                                criteriaBuilder.like(criteriaBuilder.lower(sensor.get("name")), pattern),
+                                criteriaBuilder.like(criteriaBuilder.lower(sensor.get("code")), pattern),
+                                criteriaBuilder.like(criteriaBuilder.lower(displayValue), pattern),
+                                timeMatch));
+                    }
                 }
             }
-            return criteriaBuilder.and(predicates.toArray(jakarta.persistence.criteria.Predicate[]::new));
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
         };
     }
 
@@ -208,7 +255,7 @@ public class SensorService {
                     HttpStatus.BAD_REQUEST, "Trang phải từ 0 và kích thước trang từ 1 đến 100.");
         }
     }
-
+    // Chuyển đổi đối tượng SensorData thành SensorDataDto
     private SensorDataDto toSensorDataDto(SensorData reading) {
         String code = reading.getSensor().getCode();
         String label = SENSOR_LABELS.getOrDefault(code, reading.getSensor().getName());
@@ -228,11 +275,11 @@ public class SensorService {
         reading.setMeasuredAt(measuredAt);
         readings.save(reading);
     }
-
+    // Lấy dữ liệu mới nhất của cảm biến theo mã code
     private SensorData latestFor(String code) {
         return readings.findTopBySensor_CodeOrderByMeasuredAtDesc(code).orElse(null);
     }
-
+    // Lấy giá trị của cảm biến từ đối tượng SensorData
     private BigDecimal valueOf(SensorData reading) {
         return reading == null ? null : reading.getValue();
     }

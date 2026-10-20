@@ -32,6 +32,11 @@
   font-size: 12.5px;
 }
 
+.history-page .filters input[type="text"] {
+  flex: 1 1 420px;
+  min-width: 360px;
+}
+
 .history-page table {
   width: 100%;
   border-collapse: collapse;
@@ -199,6 +204,11 @@
 }
 
 @media (max-width: 640px) {
+  .history-page .filters input[type="text"] {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
   .history-page .pagination {
     align-items: flex-start;
     flex-direction: column;

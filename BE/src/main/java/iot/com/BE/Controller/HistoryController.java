@@ -17,7 +17,7 @@ public class HistoryController {
     public HistoryController(DeviceService deviceService) {
         this.deviceService = deviceService;
     }
-    // API tìm kiếm
+
     @GetMapping
     public PagedResponse<HistoryDto> searchHistory(
             @RequestParam(defaultValue = "") String device,
