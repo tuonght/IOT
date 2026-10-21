@@ -31,6 +31,14 @@ class BeApplicationTests {
 	void sensorDataRepositoryUsesConsolidatedTable() {
 		sensorDataRepository.count();
 	}
+	// lấy đỉnh dữ liệu từ các loại cảm biến khác nhau
+	@Test
+	void chartMaximaIncludesEverySensorType() {
+		var maxima = sensorService.chartMaxima();
+
+		assertTrue(maxima.keySet().containsAll(
+				java.util.Set.of("temperature", "humidity", "light")));
+	}
 
 	@Test
 	void sensorSearchFiltersAndPaginatesInDatabase() {

@@ -103,6 +103,19 @@ public class SensorService {
     }
 
     @Transactional(readOnly = true)
+    public Map<String, BigDecimal> chartMaxima() {
+        Map<String, BigDecimal> maxima = new LinkedHashMap<>();
+        SENSOR_LABELS.keySet().forEach(sensor -> maxima.put(sensor, BigDecimal.ZERO));
+        for (Object[] result : readings.findMaximumValuesBySensorCode()) {
+            String sensor = (String) result[0];
+            if (maxima.containsKey(sensor)) {
+                maxima.put(sensor, (BigDecimal) result[1]);
+            }
+        }
+        return maxima;
+    }
+
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> chart(String sensor) {
         String normalizedSensor = sensor == null ? "all" : sensor.trim().toLowerCase(Locale.ROOT);
         if (!normalizedSensor.equals("all") && !SENSOR_LABELS.containsKey(normalizedSensor)) {

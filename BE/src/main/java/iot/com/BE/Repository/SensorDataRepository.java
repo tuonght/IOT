@@ -3,6 +3,7 @@ package iot.com.BE.Repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -18,4 +19,7 @@ public interface SensorDataRepository
     List<SensorData> findAllBySensor_CodeOrderByMeasuredAtDesc(String sensorCode, Pageable pageable);
 
     Optional<SensorData> findTopBySensor_CodeOrderByMeasuredAtDesc(String sensorCode);
+
+    @Query("select reading.sensor.code, max(reading.value) from SensorData reading group by reading.sensor.code")
+    List<Object[]> findMaximumValuesBySensorCode();
 }
