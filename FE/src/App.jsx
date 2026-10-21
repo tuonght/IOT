@@ -16,7 +16,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Route công khai: hiển thị từng trang xác thực độc lập. */}
+        
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

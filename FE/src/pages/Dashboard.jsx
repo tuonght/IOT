@@ -13,6 +13,31 @@ function formatTime(value) {
   return value ? value.replace("T", " ") : "Chưa có dữ liệu";
 }
 
+function getYAxisTicks(sensorMaxima, selectedSensor) {
+  const dataKey = selectedSensor === "all" ? "light" : selectedSensor;
+  const interval = dataKey === "light" ? 500 : 50;
+  const maximum = Number(sensorMaxima[dataKey]) || 0;
+  const upperBound = Math.max(interval, Math.ceil(maximum / interval) * interval);
+
+  return Array.from(
+    { length: upperBound / interval + 1 },
+    (_, index) => index * interval,
+  );
+}
+
+function updateSensorMaxima(current, readings) {
+  const next = { ...current };
+  readings.forEach((reading) => {
+    Object.keys(next).forEach((sensorType) => {
+      const value = Number(reading[sensorType]);
+      if (Number.isFinite(value)) {
+        next[sensorType] = Math.max(next[sensorType], value);
+      }
+    });
+  });
+  return next;
+}
+
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null;
 
@@ -34,12 +59,18 @@ function CustomTooltip({ active, payload, label }) {
 export default function Dashboard() {
   const [sensor, setSensor] = useState(EMPTY_SENSOR);
   const [chartData, setChartData] = useState([]);
+  const [sensorMaxima, setSensorMaxima] = useState({
+    temperature: 0,
+    humidity: 0,
+    light: 0,
+  });
   const [chartError, setChartError] = useState("");
   const [chartLoading, setChartLoading] = useState(true);
   const [selectedChartSensor, setSelectedChartSensor] = useState("all");
   const [devices, setDevices] = useState([]);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState("");
+  const yAxisTicks = getYAxisTicks(sensorMaxima, selectedChartSensor);
   const deviceActionMinimumLoading = useRef(new Map());
   const chartRequestVersion = useRef(0);
   const selectedChartSensorRef = useRef("all");
@@ -59,7 +90,9 @@ export default function Dashboard() {
     api.chartData(sensorType)
       .then((data) => {
         if (requestVersion === chartRequestVersion.current) {
-          setChartData(data || []);
+          const readings = data || [];
+          setChartData(readings);
+          setSensorMaxima((current) => updateSensorMaxima(current, readings));
         }
       })
       .catch((requestError) => {
@@ -86,6 +119,7 @@ export default function Dashboard() {
         light: point.light,
         updatedAt: point.time,
       });
+      setSensorMaxima((current) => updateSensorMaxima(current, [point]));
       setChartData((current) => {
         const selectedSensor = selectedChartSensorRef.current;
         const chartPoint = selectedSensor === "all"
@@ -100,9 +134,10 @@ export default function Dashboard() {
     });
 
     async function loadDashboard() {
-      const [latestResult, chartResult, devicesResult] = await Promise.allSettled([
+      const [latestResult, chartResult, maximaResult, devicesResult] = await Promise.allSettled([
         api.latestSensor(),
         api.chartData("all"),
+        api.chartMaxima(),
         api.devices(),
       ]);
       if (!mounted) return;
@@ -116,11 +151,19 @@ export default function Dashboard() {
 
       if (initialChartRequestVersion === chartRequestVersion.current) {
         if (chartResult.status === "fulfilled") {
-          setChartData(chartResult.value || []);
+          const readings = chartResult.value || [];
+          setChartData(readings);
+          setSensorMaxima((current) => updateSensorMaxima(current, readings));
         } else {
           setChartError(chartResult.reason.message);
         }
         setChartLoading(false);
+      }
+
+      if (maximaResult.status === "fulfilled") {
+        setSensorMaxima((current) => updateSensorMaxima(current, [maximaResult.value]));
+      } else {
+        errors.push(`Giá trị cảm biến cao nhất: ${maximaResult.reason.message}`);
       }
 
       if (devicesResult.status === "fulfilled") {
@@ -240,7 +283,11 @@ export default function Dashboard() {
               <LineChart data={chartData}>
                 <CartesianGrid stroke="#e5e7eb" />
                 <XAxis dataKey="time" tick={false} />
-                <YAxis domain={[0, 1200]} ticks={[0, 200, 400, 600, 800, 1000, 1200]} fontSize={11} />
+                <YAxis
+                  domain={[0, yAxisTicks[yAxisTicks.length - 1]]}
+                  ticks={yAxisTicks}
+                  fontSize={11}
+                />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend iconType="circle" />
                 {(selectedChartSensor === "all" || selectedChartSensor === "temperature") && (

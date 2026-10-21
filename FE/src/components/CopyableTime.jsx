@@ -1,32 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { copyText } from "../utils/clipboard";
 import "./CopyableTime.css";
 
 function formatTime(value) {
   return value
     ? value.trim().replace("T", " ").replace(/\s+/g, " ").slice(0, 19).trim()
     : "Chưa có dữ liệu";
-}
-
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return;
-  } catch {
-    const input = document.createElement("textarea");
-    input.value = text;
-    input.setAttribute("readonly", "");
-    input.style.position = "fixed";
-    input.style.opacity = "0";
-    document.body.appendChild(input);
-    try {
-      input.select();
-      if (!document.execCommand("copy")) {
-        throw new Error("Clipboard write failed");
-      }
-    } finally {
-      input.remove();
-    }
-  }
 }
 
 export default function CopyableTime({ value }) {

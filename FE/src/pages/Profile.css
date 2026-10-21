@@ -104,6 +104,16 @@
   overflow-wrap: anywhere;
 }
 
+.profile-row .copyable-text {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.profile-row .copyable-text-value {
+  overflow-wrap: anywhere;
+}
+
 .profile-actions {
   display: flex;
   flex-wrap: wrap;
@@ -130,9 +140,18 @@
   background: var(--ink-soft);
 }
 
-.profile-success {
-  align-self: center;
-  color: var(--ok);
+.profile-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+  padding: 13px 22px;
+  border-radius: 8px;
+  background: var(--ok);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 15%);
+  color: #fff;
+  font-size: 13px;
   font-weight: 600;
 }
 

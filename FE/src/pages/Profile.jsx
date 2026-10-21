@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, apiAssetUrl } from "../api";
+import CopyableText from "../components/CopyableText";
 import "./Profile.css";
 const EMPTY_TEXT = "--- ";
 
@@ -64,6 +65,12 @@ export default function Profile() {
       });
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    if (!saved) return undefined;
+    const timeoutId = window.setTimeout(() => setSaved(false), 2000);
+    return () => window.clearTimeout(timeoutId);
+  }, [saved]);
 
   function handleFieldChange(e) {
     const { name, value } = e.target;
@@ -132,6 +139,7 @@ export default function Profile() {
   }
 
   const getDisplayValue = (value) => (value && value.trim() ? value : EMPTY_TEXT);
+  const copyableFields = new Set(["github", "pdfLink", "apiDocs", "figma"]);
   const normalizedAvatarPath = profile.avatar?.replace(
     /^\/api\/profile\/avatar\//,
     "/uploads/"
@@ -144,6 +152,11 @@ export default function Profile() {
 
   return (
     <div>
+      {saved && (
+        <div className="profile-toast" role="status">
+          Đã cập nhật hồ sơ.
+        </div>
+      )}
       <div className="page-title">My Profile</div>
       {error && <div className="error-text">{error}</div>}
       <div className="profile-card">
@@ -175,7 +188,11 @@ export default function Profile() {
             {fields.filter((field) => field.key !== "avatar").map((field) => (
               <div className="profile-row" key={field.key}>
                 <b>{field.label}</b>
-                <span>{getDisplayValue(profile[field.key])}</span>
+                {copyableFields.has(field.key) && profile[field.key]?.trim() ? (
+                  <CopyableText value={profile[field.key]} label={field.label} />
+                ) : (
+                  <span>{getDisplayValue(profile[field.key])}</span>
+                )}
               </div>
             ))}
 
@@ -190,7 +207,6 @@ export default function Profile() {
               }}>
                 Thêm / Sửa
               </button>
-              {saved && <span className="profile-success">Đã cập nhật hồ sơ.</span>}
             </div>
           </div>
         ) : (
