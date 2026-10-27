@@ -13,29 +13,56 @@ function formatTime(value) {
   return value ? value.replace("T", " ") : "Chưa có dữ liệu";
 }
 
-function getYAxisTicks(sensorMaxima, selectedSensor) {
-  const dataKey = selectedSensor === "all" ? "light" : selectedSensor;
-  const interval = dataKey === "light" ? 500 : 50;
-  const maximum = Number(sensorMaxima[dataKey]) || 0;
-  const upperBound = Math.max(interval, Math.ceil(maximum / interval) * interval);
+function getYAxisTicks(maximum, baseStep) {
+  const safeMaximum = Math.max(0, Number(maximum) || 0);
+  const step = Math.max(
+    baseStep,
+    Math.ceil((safeMaximum / 6) / baseStep) * baseStep,
+  );
+  const upperBound = Math.max(
+    step * 4,
+    Math.ceil(safeMaximum / step) * step,
+  );
 
   return Array.from(
-    { length: upperBound / interval + 1 },
-    (_, index) => index * interval,
+    { length: upperBound / step + 1 },
+    (_, index) => index * step,
   );
 }
 
-function updateSensorMaxima(current, readings) {
-  const next = { ...current };
-  readings.forEach((reading) => {
-    Object.keys(next).forEach((sensorType) => {
+function getChartMaxima(readings) {
+  return readings.reduce((maxima, reading) => {
+    ["temperature", "humidity", "light"].forEach((sensorType) => {
       const value = Number(reading[sensorType]);
       if (Number.isFinite(value)) {
-        next[sensorType] = Math.max(next[sensorType], value);
+        maxima[sensorType] = Math.max(maxima[sensorType], value);
       }
     });
+    return maxima;
+  }, { temperature: 0, humidity: 0, light: 0 });
+}
+
+function includeLatestReading(readings, latest) {
+  if (!latest?.updatedAt) return readings;
+
+  const latestPoint = {
+    time: latest.updatedAt,
+  };
+  ["temperature", "humidity", "light"].forEach((sensorType) => {
+    if (latest[sensorType] !== null && latest[sensorType] !== undefined) {
+      latestPoint[sensorType] = latest[sensorType];
+    }
   });
-  return next;
+  if (Object.keys(latestPoint).length === 1) return readings;
+
+  const existingIndex = readings.findIndex((reading) => reading.time === latestPoint.time);
+  const merged = existingIndex < 0
+    ? [...readings, latestPoint]
+    : readings.map((reading, index) =>
+        index === existingIndex ? { ...reading, ...latestPoint } : reading
+      );
+
+  return merged.sort((a, b) => a.time.localeCompare(b.time)).slice(-15);
 }
 
 function CustomTooltip({ active, payload, label }) {
@@ -59,18 +86,22 @@ function CustomTooltip({ active, payload, label }) {
 export default function Dashboard() {
   const [sensor, setSensor] = useState(EMPTY_SENSOR);
   const [chartData, setChartData] = useState([]);
-  const [sensorMaxima, setSensorMaxima] = useState({
-    temperature: 0,
-    humidity: 0,
-    light: 0,
-  });
   const [chartError, setChartError] = useState("");
   const [chartLoading, setChartLoading] = useState(true);
   const [selectedChartSensor, setSelectedChartSensor] = useState("all");
   const [devices, setDevices] = useState([]);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState("");
-  const yAxisTicks = getYAxisTicks(sensorMaxima, selectedChartSensor);
+  const sensorMaxima = getChartMaxima(chartData);
+  const lightAxisTicks = getYAxisTicks(sensorMaxima.light, 500);
+  const environmentAxisTicks = getYAxisTicks(
+    Math.max(sensorMaxima.temperature, sensorMaxima.humidity),
+    10,
+  );
+  const selectedSensorTicks = getYAxisTicks(
+    sensorMaxima[selectedChartSensor],
+    selectedChartSensor === "light" ? 500 : 10,
+  );
   const deviceActionMinimumLoading = useRef(new Map());
   const chartRequestVersion = useRef(0);
   const selectedChartSensorRef = useRef("all");
@@ -92,7 +123,6 @@ export default function Dashboard() {
         if (requestVersion === chartRequestVersion.current) {
           const readings = data || [];
           setChartData(readings);
-          setSensorMaxima((current) => updateSensorMaxima(current, readings));
         }
       })
       .catch((requestError) => {
@@ -119,7 +149,6 @@ export default function Dashboard() {
         light: point.light,
         updatedAt: point.time,
       });
-      setSensorMaxima((current) => updateSensorMaxima(current, [point]));
       setChartData((current) => {
         const selectedSensor = selectedChartSensorRef.current;
         const chartPoint = selectedSensor === "all"
@@ -134,10 +163,9 @@ export default function Dashboard() {
     });
 
     async function loadDashboard() {
-      const [latestResult, chartResult, maximaResult, devicesResult] = await Promise.allSettled([
+      const [latestResult, chartResult, devicesResult] = await Promise.allSettled([
         api.latestSensor(),
         api.chartData("all"),
-        api.chartMaxima(),
         api.devices(),
       ]);
       if (!mounted) return;
@@ -152,18 +180,14 @@ export default function Dashboard() {
       if (initialChartRequestVersion === chartRequestVersion.current) {
         if (chartResult.status === "fulfilled") {
           const readings = chartResult.value || [];
-          setChartData(readings);
-          setSensorMaxima((current) => updateSensorMaxima(current, readings));
+          const latestReading = latestResult.status === "fulfilled"
+            ? latestResult.value
+            : null;
+          setChartData(includeLatestReading(readings, latestReading));
         } else {
           setChartError(chartResult.reason.message);
         }
         setChartLoading(false);
-      }
-
-      if (maximaResult.status === "fulfilled") {
-        setSensorMaxima((current) => updateSensorMaxima(current, [maximaResult.value]));
-      } else {
-        errors.push(`Giá trị cảm biến cao nhất: ${maximaResult.reason.message}`);
       }
 
       if (devicesResult.status === "fulfilled") {
@@ -178,7 +202,9 @@ export default function Dashboard() {
             }
             if (!mounted) return;
             setDevices((current) => current.map((item) =>
-              item.id === update.id ? { ...item, status: update.status } : item
+              item.id === update.id
+                ? { ...item, status: String(update.status || "OFF").toUpperCase() }
+                : item
             ));
             if (update.commandSucceeded === true) {
               const actionText = update.commandAction === "ON" ? "bật" : "tắt";
@@ -229,7 +255,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
+    <div className="dashboard-page">
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
       <div className="page-title">Dashboard</div>
       {error && <div className="error-text">{error}</div>}
@@ -250,14 +276,13 @@ export default function Dashboard() {
         <div className="metric-card light">
           <div className="metric-label">Light</div>
           <div className="metric-value">
-            {sensor.light ?? "--"}<span className="metric-unit">adc</span>
+            {sensor.light ?? "--"}<span className="metric-unit">lux</span>
           </div>
         </div>
       </div>
       <div className="sensor-updated-at">
         Cập nhật lần cuối: {formatTime(sensor.updatedAt)}
       </div>
-
       <div className="dash-grid">
         <div className="panel">
           <div className="panel-title chart-header">
@@ -279,28 +304,95 @@ export default function Dashboard() {
           ) : chartError ? (
             <div className="error-text">Không thể tải biểu đồ: {chartError}</div>
           ) : chartData.length ? (
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={chartData}>
+            <div className="chart-with-axis-units">
+              <span className={`chart-axis-unit chart-axis-unit-left chart-axis-unit-${selectedChartSensor}`}>
+                {selectedChartSensor === "all" || selectedChartSensor === "light"
+                  ? "lux"
+                  : selectedChartSensor === "temperature" ? "°C" : "%"}
+              </span>
+              {selectedChartSensor === "all" ? (
+                <span className="chart-axis-units-right">
+                  <span className="chart-axis-unit chart-axis-unit-temperature">°C</span>
+                  <span className="chart-axis-unit chart-axis-unit-humidity">%</span>
+                </span>
+              ) : null}
+              <ResponsiveContainer width="100%" height={360}>
+                <LineChart
+                  data={chartData}
+                  margin={{ top: 32, right: 10, left: 10, bottom: 10 }}
+                >
                 <CartesianGrid stroke="#e5e7eb" />
                 <XAxis dataKey="time" tick={false} />
-                <YAxis
-                  domain={[0, yAxisTicks[yAxisTicks.length - 1]]}
-                  ticks={yAxisTicks}
-                  fontSize={11}
-                />
+                {selectedChartSensor === "all" ? (
+                  <>
+                    <YAxis
+                      yAxisId="light"
+                      domain={[0, lightAxisTicks[lightAxisTicks.length - 1]]}
+                      ticks={lightAxisTicks}
+                      fontSize={11}
+                    />
+                    <YAxis
+                      yAxisId="environment"
+                      orientation="right"
+                      domain={[0, environmentAxisTicks[environmentAxisTicks.length - 1]]}
+                      ticks={environmentAxisTicks}
+                      fontSize={11}
+                    />
+                  </>
+                ) : (
+                  <YAxis
+                    domain={[0, selectedSensorTicks[selectedSensorTicks.length - 1]]}
+                    ticks={selectedSensorTicks}
+                    fontSize={11}
+                  />
+                )}
                 <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{
+                    fontSize: "16px",
+                    fontWeight: 800,
+                    paddingTop: "10px",
+                  }}
+                  formatter={(value) => (
+                    <span className={`chart-legend-${value.toLowerCase()}`}>
+                      {value}
+                    </span>
+                  )}
+                />
                 {(selectedChartSensor === "all" || selectedChartSensor === "temperature") && (
-                  <Line type="monotone" dataKey="temperature" stroke="#2563eb" name="Temperature" />
+                  <Line
+                    type="monotone"
+                    dataKey="temperature"
+                    yAxisId={selectedChartSensor === "all" ? "environment" : undefined}
+                    stroke="#2563eb"
+                    name="Temperature"
+                    dot={{ r: 3 }}
+                  />
                 )}
                 {(selectedChartSensor === "all" || selectedChartSensor === "humidity") && (
-                  <Line type="monotone" dataKey="humidity" stroke="#dc2626" name="Humidity" />
+                  <Line
+                    type="monotone"
+                    dataKey="humidity"
+                    yAxisId={selectedChartSensor === "all" ? "environment" : undefined}
+                    stroke="#dc2626"
+                    name="Humidity"
+                    dot={{ r: 3 }}
+                  />
                 )}
                 {(selectedChartSensor === "all" || selectedChartSensor === "light") && (
-                  <Line type="monotone" dataKey="light" stroke="#d97706" name="Light" />
+                  <Line
+                    type="monotone"
+                    dataKey="light"
+                    yAxisId={selectedChartSensor === "all" ? "light" : undefined}
+                    stroke="#d97706"
+                    name="Light"
+                    dot={{ r: 3 }}
+                  />
                 )}
-              </LineChart>
-            </ResponsiveContainer>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
             <div className="sensor-updated-at">Chưa nhận được dữ liệu cảm biến.</div>
           )}
@@ -308,20 +400,29 @@ export default function Dashboard() {
 
         <div className="device-list">
           <div className="panel-title">Thiết bị</div>
-          {devices.map((device) => (
+          {devices.filter((device) => device.code !== "LED4").map((device) => (
             <div className="device-card" key={device.id}>
               <div className="device-top">
                 <span className="device-name">{device.name}</span>
-                <span className={`device-state ${device.status.toLowerCase()}`} aria-live="polite">
-                  {device.status}
+                <span
+                  className={`device-state ${String(device.status || "OFF").toLowerCase()}`}
+                  aria-live="polite"
+                >
+                  {String(device.status || "OFF").toUpperCase()}
                 </span>
               </div>
               <div className="device-btns">
                 {["ON", "OFF"].map((action) => (
                   <button
                     key={action}
-                    className={`dbtn${device.status === action ? ` selected ${action.toLowerCase()}` : ""}`}
-                    disabled={device.status === "LOADING"}
+                    className={`dbtn ${
+                      String(device.status).toUpperCase() === "OFF" && action === "ON"
+                        ? "available-on"
+                        : String(device.status).toUpperCase() === "ON" && action === "OFF"
+                          ? "available-off"
+                          : ""
+                    }`}
+                    disabled={String(device.status).toUpperCase() === "LOADING"}
                     onClick={() => toggleDevice(device, action)}
                   >
                     {action}

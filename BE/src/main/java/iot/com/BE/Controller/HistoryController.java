@@ -33,4 +33,5 @@ public class HistoryController {
     public java.util.List<String> historyDevices() {
         return deviceService.historyDevices();
     }
+
 }

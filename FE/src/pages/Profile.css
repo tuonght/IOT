@@ -104,6 +104,14 @@
   overflow-wrap: anywhere;
 }
 
+.profile-row a {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .profile-row .copyable-text {
   min-width: 0;
   max-width: 100%;

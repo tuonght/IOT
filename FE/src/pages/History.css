@@ -92,6 +92,11 @@
   color: var(--warn);
 }
 
+.history-page .badge.alert {
+  background: #fff0d9;
+  color: #b45309;
+}
+
 
 .history-page .pagination {
   display: flex;

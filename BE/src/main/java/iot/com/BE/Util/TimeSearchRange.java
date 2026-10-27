@@ -14,6 +14,8 @@ public record TimeSearchRange(LocalDateTime startInclusive, LocalDateTime endExc
     private static final Pattern YEAR = Pattern.compile("\\d{4}");
     private static final Pattern YEAR_MONTH = Pattern.compile("\\d{4}-\\d{2}");
     private static final Pattern DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
+    private static final Pattern MINUTE =
+            Pattern.compile("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}");
     private static final DateTimeFormatter DATE_TIME =
             DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss")
                     .withResolverStyle(ResolverStyle.STRICT);
@@ -32,6 +34,12 @@ public record TimeSearchRange(LocalDateTime startInclusive, LocalDateTime endExc
             if (DATE.matcher(normalized).matches()) {
                 LocalDateTime start = LocalDate.parse(normalized).atStartOfDay();
                 return Optional.of(new TimeSearchRange(start, start.plusDays(1)));
+            }
+            if (MINUTE.matcher(normalized).matches()) {
+                LocalDateTime start = LocalDateTime.parse(
+                        normalized + ":00",
+                        DATE_TIME);
+                return Optional.of(new TimeSearchRange(start, start.plusMinutes(1)));
             }
             if (normalized.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}")) {
                 LocalDateTime start = LocalDateTime.parse(normalized, DATE_TIME);

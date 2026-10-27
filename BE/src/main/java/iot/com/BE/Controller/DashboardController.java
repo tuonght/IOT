@@ -2,7 +2,6 @@ package iot.com.BE.Controller;
 
 import java.util.List;
 import java.util.Map;
-import java.math.BigDecimal;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,11 +23,6 @@ public class DashboardController {
     @GetMapping("/sensor-latest")
     public SensorLatestDto latest() {
         return sensorService.latest();
-    }
-
-    @GetMapping("/chart/maxima")
-    public Map<String, BigDecimal> chartMaxima() {
-        return sensorService.chartMaxima();
     }
 
     @GetMapping("/chart")

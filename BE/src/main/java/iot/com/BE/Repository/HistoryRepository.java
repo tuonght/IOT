@@ -15,11 +15,12 @@ import iot.com.BE.Entity.History;
 @Repository
 public interface HistoryRepository
         extends JpaRepository<History, Long>, JpaSpecificationExecutor<History> {
-    @Query("select distinct h.device.name from History h order by h.device.name")
+    @Query("select distinct h.device.name from History h where h.device.code <> 'LED4' and h.action <> 'ALERT' order by h.device.name")
     List<String> findDistinctDeviceNames();
 
     Optional<History> findFirstByDevice_IdAndStatusOrderByRequestedAtDesc(
             Long deviceId, ActionStatus status);
 
     List<History> findAllByStatusAndRequestedAtBefore(ActionStatus status, LocalDateTime cutoff);
+
 }

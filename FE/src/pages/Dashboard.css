@@ -1,3 +1,8 @@
+.dashboard-page {
+  height: calc(100vh - 65px - 56px);
+  overflow: hidden;
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -75,6 +80,63 @@
   font-size: 12.5px;
 }
 
+.chart-with-axis-units {
+  position: relative;
+}
+
+.chart-axis-unit {
+  position: absolute;
+  top: 3px;
+  z-index: 1;
+  pointer-events: none;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.chart-axis-unit-left {
+  left: 34px;
+  color: #d97706;
+}
+
+.chart-axis-unit-left.chart-axis-unit-temperature {
+  color: #2563eb;
+}
+
+.chart-axis-unit-left.chart-axis-unit-humidity {
+  color: #dc2626;
+}
+
+.chart-axis-units-right {
+  position: absolute;
+  top: 0;
+  right: 29px;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+}
+
+.chart-axis-unit-temperature {
+  position: static;
+  color: #2563eb;
+}
+
+.chart-axis-unit-humidity {
+  position: static;
+  color: #dc2626;
+}
+
+.chart-legend-temperature {
+  color: #2563eb;
+}
+
+.chart-legend-humidity {
+  color: #dc2626;
+}
+
+.chart-legend-light {
+  color: #d97706;
+}
+
 
 .device-list {
   display: flex;
@@ -141,31 +203,15 @@
   background: var(--panel);
   color: var(--ink-soft);
   font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
-
-.dbtn.on {
-  border-color: #b9e8c8;
-  background: #eafaef;
-  color: var(--ok);
-}
-
-.dbtn.off {
-  border-color: #f3c2c2;
-  background: #fbecec;
-  color: var(--off);
-}
-
-
-.dbtn.selected.on {
+.dbtn.available-on {
   border-color: var(--ok);
   background: var(--ok);
   color: #fff;
 }
 
-.dbtn.selected.off {
+.dbtn.available-off {
   border-color: var(--off);
   background: var(--off);
   color: #fff;
@@ -230,6 +276,12 @@
 
 /* Màn hình hẹp: chuyển lưới thành một cột để dễ đọc trên điện thoại. */
 @media (max-width: 760px) {
+  .dashboard-page {
+    height: auto;
+    min-height: calc(100vh - 65px - 56px);
+    overflow: visible;
+  }
+
   .dash-grid {
     grid-template-columns: 1fr;
   }

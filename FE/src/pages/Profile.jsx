@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { api, apiAssetUrl } from "../api";
-import CopyableText from "../components/CopyableText";
 import "./Profile.css";
 const EMPTY_TEXT = "--- ";
 
@@ -140,6 +139,20 @@ export default function Profile() {
 
   const getDisplayValue = (value) => (value && value.trim() ? value : EMPTY_TEXT);
   const copyableFields = new Set(["github", "pdfLink", "apiDocs", "figma"]);
+  function getLinkHref(value) {
+    return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  }
+  function getLinkLabel(value) {
+    const href = getLinkHref(value);
+    try {
+      const url = new URL(href);
+      const shortPath = url.pathname === "/" ? "" : url.pathname;
+      const label = `${url.hostname.replace(/^www\./i, "")}${shortPath}`;
+      return label.length > 42 ? `${label.slice(0, 39)}...` : label;
+    } catch {
+      return value.length > 42 ? `${value.slice(0, 39)}...` : value;
+    }
+  }
   const normalizedAvatarPath = profile.avatar?.replace(
     /^\/api\/profile\/avatar\//,
     "/uploads/"
@@ -189,7 +202,14 @@ export default function Profile() {
               <div className="profile-row" key={field.key}>
                 <b>{field.label}</b>
                 {copyableFields.has(field.key) && profile[field.key]?.trim() ? (
-                  <CopyableText value={profile[field.key]} label={field.label} />
+                  <a
+                    href={getLinkHref(profile[field.key].trim())}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={profile[field.key]}
+                  >
+                    {getLinkLabel(profile[field.key].trim())}
+                  </a>
                 ) : (
                   <span>{getDisplayValue(profile[field.key])}</span>
                 )}

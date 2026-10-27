@@ -24,22 +24,25 @@ public class InitialDataConfig {
                     devices.save(device);
                 }
             }
-
             addSensorIfMissing(sensors, "temperature", "Nhiệt độ", "TEMPERATURE", "°C");
             addSensorIfMissing(sensors, "humidity", "Độ ẩm", "HUMIDITY", "%");
-            addSensorIfMissing(sensors, "light", "Ánh sáng", "LIGHT", "adc");
+            addSensorIfMissing(sensors, "light", "Ánh sáng", "LIGHT", "lux");
         };
     }
 
     private void addSensorIfMissing(
             SensorRepository sensors, String code, String name, String type, String unit) {
-        if (sensors.findByCode(code).isEmpty()) {
-            Sensor sensor = new Sensor();
+        Sensor sensor = sensors.findByCode(code).orElse(null);
+        if (sensor == null) {
+            sensor = new Sensor();
             sensor.setCode(code);
             sensor.setName(name);
             sensor.setType(type);
             sensor.setUnit(unit);
-            sensors.save(sensor);
         }
+        sensor.setName(name);
+        sensor.setType(type);
+        sensor.setUnit(unit);
+        sensors.save(sensor);
     }
 }

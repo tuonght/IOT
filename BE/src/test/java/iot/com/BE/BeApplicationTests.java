@@ -14,48 +14,46 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 class BeApplicationTests {
 
-	@Autowired
-	private SensorDataRepository sensorDataRepository;
+    @Autowired
+    private SensorDataRepository sensorDataRepository;
 
-	@Autowired
-	private SensorService sensorService;
+    @Autowired
+    private SensorService sensorService;
 
-	@Autowired
-	private DeviceService deviceService;
+    @Autowired
+    private DeviceService deviceService;
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void contextLoads() {
+    }
 
-	@Test
-	void sensorDataRepositoryUsesConsolidatedTable() {
-		sensorDataRepository.count();
-	}
-	// lấy đỉnh dữ liệu từ các loại cảm biến khác nhau
-	@Test
-	void chartMaximaIncludesEverySensorType() {
-		var maxima = sensorService.chartMaxima();
+    @Test
+    void sensorDataRepositoryUsesConsolidatedTable() {
+        sensorDataRepository.count();
+    }
 
-		assertTrue(maxima.keySet().containsAll(
-				java.util.Set.of("temperature", "humidity", "light")));
-	}
+    @Test
+    void sensorSearchFiltersAndPaginatesInDatabase() {
+        var result = sensorService.searchReadings("temperature", "0", "asc", 0, 10);
 
-	@Test
-	void sensorSearchFiltersAndPaginatesInDatabase() {
-		var result = sensorService.searchReadings("temperature", "0", "asc", 0, 10);
+        assertEquals(0, result.page());
+        assertEquals(10, result.size());
+        assertTrue(result.totalElements() >= result.content().size());
+    }
 
-		assertEquals(0, result.page());
-		assertEquals(10, result.size());
-		assertTrue(result.totalElements() >= result.content().size());
-	}
+    @Test
+    void chartLoadsRecentCombinedReadings() {
+        var result = sensorService.chart("all");
 
-	@Test
-	void historySearchFiltersByTimeAndPaginatesInDatabase() {
-		var result = deviceService.searchHistory("", "", "success", "0", 0, 10);
+        assertTrue(result.size() <= 15);
+    }
 
-		assertEquals(0, result.page());
-		assertEquals(10, result.size());
-		assertTrue(result.totalElements() >= result.content().size());
-	}
+    @Test
+    void historySearchFiltersByTimeAndPaginatesInDatabase() {
+        var result = deviceService.searchHistory("", "", "success", "0", 0, 10);
 
+        assertEquals(0, result.page());
+        assertEquals(10, result.size());
+        assertTrue(result.totalElements() >= result.content().size());
+    }
 }

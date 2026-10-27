@@ -37,7 +37,6 @@ import iot.com.BE.Entity.Sensor;
 import iot.com.BE.Entity.SensorData;
 import iot.com.BE.Repository.SensorDataRepository;
 import iot.com.BE.Repository.SensorRepository;
-import iot.com.BE.Util.TimeSearchRange;
 
 @Service
 public class SensorService {
@@ -80,7 +79,11 @@ public class SensorService {
             saveReading("light", light, measuredAt);
             messagingTemplate.convertAndSend(
                     "/topic/sensors/live",
-                    new ChartPointDto(measuredAt, temperature, humidity, light));
+                    new ChartPointDto(
+                            measuredAt,
+                            temperature,
+                            humidity,
+                            light));
         } catch (Exception exception) {
             logger.warn("Discarded invalid MQTT sensor payload: {}", exception.getMessage());
         }
@@ -99,20 +102,10 @@ public class SensorService {
             }
         }
         return new SensorLatestDto(
-                valueOf(temperature), valueOf(humidity), valueOf(light), updatedAt);
-    }
-
-    @Transactional(readOnly = true)
-    public Map<String, BigDecimal> chartMaxima() {
-        Map<String, BigDecimal> maxima = new LinkedHashMap<>();
-        SENSOR_LABELS.keySet().forEach(sensor -> maxima.put(sensor, BigDecimal.ZERO));
-        for (Object[] result : readings.findMaximumValuesBySensorCode()) {
-            String sensor = (String) result[0];
-            if (maxima.containsKey(sensor)) {
-                maxima.put(sensor, (BigDecimal) result[1]);
-            }
-        }
-        return maxima;
+                valueOf(temperature),
+                valueOf(humidity),
+                valueOf(light),
+                updatedAt);
     }
 
     @Transactional(readOnly = true)
@@ -140,7 +133,7 @@ public class SensorService {
             String code = reading.getSensor().getCode();
             if (SENSOR_LABELS.containsKey(code)) {
                 points.computeIfAbsent(reading.getMeasuredAt(), ignored -> new LinkedHashMap<>())
-                        .put(code, reading.getValue());
+                        .put(code, displayValue(reading));
             }
         }
 
@@ -161,7 +154,7 @@ public class SensorService {
     private Map<String, Object> chartPointForSensor(SensorData reading, String sensor) {
         Map<String, Object> point = new LinkedHashMap<>();
         point.put("time", reading.getMeasuredAt());
-        point.put(sensor, reading.getValue());
+        point.put(sensor, displayValue(reading));
         return point;
     }
     //
@@ -184,6 +177,23 @@ public class SensorService {
                 result.getTotalElements(),
                 result.getTotalPages());
     }
+
+    // Chuẩn hóa chuỗi tìm thời gian thành tiền tố dạng "yyyy-MM-dd HH:mm:ss".
+    // Trả về null nếu chuỗi chứa ký tự không hợp lệ (chỉ cho số, '-', ':', dấu cách, 'T').
+    private String toTimePrefix(String query) {
+        String normalized = query.replace('t', ' ').replace('T', ' ')
+                .replaceAll("\\s+", " ")
+                .stripLeading();
+        if (normalized.isEmpty() || !normalized.matches("[0-9\\-: ]+")) {
+            return null;
+        }
+        return normalized;
+    }
+
+    private boolean isNumericQuery(String query) {
+        return query.matches("\\d+(?:\\.\\d+)?");
+    }
+
     // Tạo điều kiện tìm kiếm cho cảm biến
     private Specification<SensorData> sensorSpecification(String type, String query) {
         if (!type.equals("all") && !type.equals("time")
@@ -193,7 +203,6 @@ public class SensorService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Loại cảm biến không hợp lệ.");
         }
 
-        var timeRange = TimeSearchRange.parse(query);
         return (root, criteriaQuery, criteriaBuilder) -> {
             var sensor = root.join("sensor");
             List<Predicate> predicates = new ArrayList<>();
@@ -209,37 +218,42 @@ public class SensorService {
             }
 
             if (!query.isBlank()) {
-                String pattern = "%" + query + "%";
-                jakarta.persistence.criteria.Predicate timeMatch;
-                if (timeRange.isPresent()) {
-                    TimeSearchRange range = timeRange.get();
-                    var measuredAt = root.<LocalDateTime>get("measuredAt");
-                    timeMatch = criteriaBuilder.and(
-                            criteriaBuilder.greaterThanOrEqualTo(measuredAt, range.startInclusive()),
-                            criteriaBuilder.lessThan(measuredAt, range.endExclusive()));
+                // Khớp tiền tố thời gian: 2026-09 -> cả tháng 9, 2026-09-15 -> cả ngày 15...
+                String timePrefix = toTimePrefix(query);
+                Predicate timeMatch;
+                if (timePrefix == null) {
+                    timeMatch = criteriaBuilder.disjunction(); // luôn false
                 } else {
                     var measuredAt = criteriaBuilder.function(
                             "date_format",
                             String.class,
                             root.get("measuredAt"),
                             criteriaBuilder.literal("%Y-%m-%d %H:%i:%s"));
-                    timeMatch = criteriaBuilder.like(measuredAt, pattern);
+                    timeMatch = criteriaBuilder.like(measuredAt, timePrefix + "%");
                 }
+
                 if (type.equals("time")) {
                     predicates.add(timeMatch);
                 } else {
+                    String valuePattern = isNumericQuery(query)
+                            ? query + "%"
+                            : "%" + query + "%";
                     var displayValue = criteriaBuilder.concat(
                             criteriaBuilder.concat(root.get("value").as(String.class), " "),
                             sensor.get("unit"));
                     if (sensorCode != null) {
-                        predicates.add(criteriaBuilder.like(
-                                criteriaBuilder.lower(displayValue), pattern));
+                        Predicate valueMatch = criteriaBuilder.like(
+                                criteriaBuilder.lower(displayValue), valuePattern);
+                        predicates.add(valueMatch);
                     } else {
-                        predicates.add(criteriaBuilder.or(
-                                criteriaBuilder.like(criteriaBuilder.lower(sensor.get("name")), pattern),
-                                criteriaBuilder.like(criteriaBuilder.lower(sensor.get("code")), pattern),
-                                criteriaBuilder.like(criteriaBuilder.lower(displayValue), pattern),
-                                timeMatch));
+                        Predicate valueMatch = criteriaBuilder.or(
+                                criteriaBuilder.like(
+                                        criteriaBuilder.lower(sensor.get("name")), "%" + query + "%"),
+                                criteriaBuilder.like(
+                                        criteriaBuilder.lower(sensor.get("code")), "%" + query + "%"),
+                                criteriaBuilder.like(
+                                        criteriaBuilder.lower(displayValue), valuePattern));
+                        predicates.add(criteriaBuilder.or(valueMatch, timeMatch));
                     }
                 }
             }
@@ -275,7 +289,7 @@ public class SensorService {
         return new SensorDataDto(
                 reading.getId(),
                 label,
-                reading.getValue().toPlainString() + " " + reading.getSensor().getUnit(),
+                displayValue(reading).toPlainString() + " " + reading.getSensor().getUnit(),
                 reading.getMeasuredAt());
     }
 
@@ -294,7 +308,11 @@ public class SensorService {
     }
     // Lấy giá trị của cảm biến từ đối tượng SensorData
     private BigDecimal valueOf(SensorData reading) {
-        return reading == null ? null : reading.getValue();
+        return reading == null ? null : displayValue(reading);
+    }
+
+    private BigDecimal displayValue(SensorData reading) {
+        return reading.getValue();
     }
 
     private BigDecimal requireNumber(JsonNode body, String property) {

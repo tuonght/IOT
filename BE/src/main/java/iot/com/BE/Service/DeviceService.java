@@ -34,7 +34,6 @@ import iot.com.BE.Entity.History;
 import iot.com.BE.Repository.DeviceRepository;
 import iot.com.BE.Repository.HistoryRepository;
 import iot.com.BE.Repository.UserRepository;
-import iot.com.BE.Util.TimeSearchRange;
 
 @Service
 public class DeviceService {
@@ -63,9 +62,10 @@ public class DeviceService {
         this.messagingTemplate = messagingTemplate;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true) 
     public List<DeviceDto> devices() {
         return devices.findAll().stream()
+                .filter(device -> !"LED4".equals(device.getCode()))
                 .map(device -> new DeviceDto(
                         device.getId(), device.getCode(), device.getName(), device.getCurrentStatus()))
                 .toList();
@@ -148,6 +148,18 @@ public class DeviceService {
         }
     }
 
+    // Chuẩn hóa chuỗi tìm thời gian thành tiền tố dạng "yyyy-MM-dd HH:mm:ss".
+    // Trả về null nếu chuỗi chứa ký tự không hợp lệ (chỉ cho số, '-', ':', dấu cách, 'T').
+    private String toTimePrefix(String time) {
+        String normalized = time.replace('t', ' ').replace('T', ' ')
+                .replaceAll("\\s+", " ")
+                .stripLeading();
+        if (normalized.isEmpty() || !normalized.matches("[0-9\\-: ]+")) {
+            return null;
+        }
+        return normalized;
+    }
+
     @Transactional(readOnly = true)
     public PagedResponse<HistoryDto> searchHistory(
             String device, String action, String status, String time, int page, int size) {
@@ -160,15 +172,16 @@ public class DeviceService {
         String normalizedDevice = device == null ? "" : device.trim().toLowerCase(Locale.ROOT);
         String normalizedAction = action == null ? "" : action.trim().toUpperCase(Locale.ROOT);
         String normalizedTime = time == null ? "" : time.trim().replaceAll("\\s+", " ");
-        var timeRange = TimeSearchRange.parse(normalizedTime);
         if (!normalizedAction.isBlank()
                 && !normalizedAction.equals("ON")
                 && !normalizedAction.equals("OFF")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Hành động phải là ON hoặc OFF.");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Hành động phải là ON hoặc OFF.");
         }
 
         Specification<History> specification = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.notEqual(root.get("action"), "ALERT"));
             if (!normalizedDevice.isBlank()) {
                 predicates.add(criteriaBuilder.equal(
                         criteriaBuilder.lower(root.join("device").get("name")), normalizedDevice));
@@ -180,21 +193,17 @@ public class DeviceService {
                 predicates.add(criteriaBuilder.equal(root.get("status"), normalizedStatus));
             }
             if (!normalizedTime.isBlank()) {
-                if (timeRange.isPresent()) {
-                    TimeSearchRange range = timeRange.get();
-                    var requestedAt = root.<LocalDateTime>get("requestedAt");
-                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(
-                            requestedAt, range.startInclusive()));
-                    predicates.add(criteriaBuilder.lessThan(
-                            requestedAt, range.endExclusive()));
+                // Khớp tiền tố thời gian: 2026-09 -> cả tháng 9, 2026-09-15 -> cả ngày 15...
+                String timePrefix = toTimePrefix(normalizedTime);
+                if (timePrefix == null) {
+                    predicates.add(criteriaBuilder.disjunction()); // sai định dạng -> không có kết quả
                 } else {
                     var requestedAt = criteriaBuilder.function(
                             "date_format",
                             String.class,
                             root.get("requestedAt"),
                             criteriaBuilder.literal("%Y-%m-%d %H:%i:%s"));
-                    predicates.add(criteriaBuilder.like(
-                            requestedAt, "%" + normalizedTime.toLowerCase(Locale.ROOT) + "%"));
+                    predicates.add(criteriaBuilder.like(requestedAt, timePrefix + "%"));
                 }
             }
             return criteriaBuilder.and(
