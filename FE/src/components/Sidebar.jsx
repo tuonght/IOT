@@ -20,6 +20,9 @@ export default function Sidebar() {
       <NavLink to="/history" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
         History
       </NavLink>
+      <NavLink to="/alert-statistics" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
+        Thống kê cảnh báo
+      </NavLink>
       <NavLink to="/profile" className={({ isActive }) => "nav-item" + (isActive ? " active" : "")}>
         My Profile
       </NavLink>

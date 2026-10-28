@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
+import AlertStatistics from "./pages/AlertStatistics";
 import DataSensor from "./pages/DataSensor";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
@@ -25,6 +26,7 @@ export default function App() {
         {/* Route lồng nhau: Layout bảo vệ và bao quanh các trang chính. */}
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/alert-statistics" element={<AlertStatistics />} />
           <Route path="/data-sensor" element={<DataSensor />} />
           <Route path="/history" element={<History />} />
           <Route path="/profile" element={<Profile />} />

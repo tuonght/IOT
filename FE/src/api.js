@@ -68,6 +68,11 @@ export const api = {
   latestSensor: () => apiRequest("/dashboard/sensor-latest"),
   chartData: (sensor = "all") => apiRequest(withQuery("/dashboard/chart", { sensor })),
   devices: () => apiRequest("/devices"),
+  deviceAlerts: () => apiRequest("/device-alerts"),
+  updateDeviceAlert: (code, data) => apiRequest(`/device-alerts/${code}`, {
+    method: "PATCH", body: JSON.stringify(data),
+  }),
+  deviceAlertStatistics: (days = 7) => apiRequest(withQuery("/device-alerts/statistics", { days })),
   setDeviceStatus: (id, action) => apiRequest(`/devices/${id}/actions`, { method: "POST", body: JSON.stringify({ action }) }),
   sensorData: (params) => apiRequest(withQuery("/sensors", params)),
   history: (params) => apiRequest(withQuery("/history", params)),

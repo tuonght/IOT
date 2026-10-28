@@ -4,6 +4,8 @@ import {
 } from "recharts";
 import { api } from "../api";
 import { connectStomp } from "../socket";
+import DeviceAlertSettings from "../components/DeviceAlertSettings";
+import { useDeviceAlerts } from "../hooks/useDeviceAlerts";
 import "./Dashboard.css";
 
 const EMPTY_SENSOR = { temperature: null, humidity: null, light: null, updatedAt: null };
@@ -84,6 +86,7 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 export default function Dashboard() {
+  const { rules: alertRules, error: alertError, onRuleSaved } = useDeviceAlerts();
   const [sensor, setSensor] = useState(EMPTY_SENSOR);
   const [chartData, setChartData] = useState([]);
   const [chartError, setChartError] = useState("");
@@ -400,37 +403,42 @@ export default function Dashboard() {
 
         <div className="device-list">
           <div className="panel-title">Thiết bị</div>
-          {devices.filter((device) => device.code !== "LED4").map((device) => (
-            <div className="device-card" key={device.id}>
-              <div className="device-top">
-                <span className="device-name">{device.name}</span>
-                <span
-                  className={`device-state ${String(device.status || "OFF").toLowerCase()}`}
-                  aria-live="polite"
-                >
-                  {String(device.status || "OFF").toUpperCase()}
-                </span>
-              </div>
-              <div className="device-btns">
-                {["ON", "OFF"].map((action) => (
-                  <button
-                    key={action}
-                    className={`dbtn ${
-                      String(device.status).toUpperCase() === "OFF" && action === "ON"
-                        ? "available-on"
-                        : String(device.status).toUpperCase() === "ON" && action === "OFF"
-                          ? "available-off"
-                          : ""
-                    }`}
-                    disabled={String(device.status).toUpperCase() === "LOADING"}
-                    onClick={() => toggleDevice(device, action)}
+          {alertError && <div className="device-alert-error">Cảnh báo: {alertError}</div>}
+          {devices.filter((device) => device.code !== "LED4").map((device) => {
+            const alertRule = alertRules.find((rule) => rule.deviceCode === device.code);
+            return (
+              <div className={`device-card${alertRule?.active ? " device-alert-active" : ""}`} key={device.id}>
+                <div className="device-top">
+                  <span className="device-name">{device.name}</span>
+                  <span
+                    className={`device-state ${String(device.status || "OFF").toLowerCase()}`}
+                    aria-live="polite"
                   >
-                    {action}
-                  </button>
-                ))}
+                    {String(device.status || "OFF").toUpperCase()}
+                  </span>
+                </div>
+                <div className="device-btns">
+                  {["ON", "OFF"].map((action) => (
+                    <button
+                      key={action}
+                      className={`dbtn ${
+                        String(device.status).toUpperCase() === "OFF" && action === "ON"
+                          ? "available-on"
+                          : String(device.status).toUpperCase() === "ON" && action === "OFF"
+                            ? "available-off"
+                            : ""
+                      }`}
+                      disabled={String(device.status).toUpperCase() === "LOADING"}
+                      onClick={() => toggleDevice(device, action)}
+                    >
+                      {action}
+                    </button>
+                  ))}
+                </div>
+                <DeviceAlertSettings rule={alertRule} onSaved={onRuleSaved} />
               </div>
-            </div>
-          ))}
+            );
+          })}
           {!devices.length && !error && (
             <div className="sensor-updated-at">Chưa cấu hình thiết bị.</div>
           )}

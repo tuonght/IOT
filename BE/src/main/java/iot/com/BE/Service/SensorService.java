@@ -15,6 +15,7 @@ import jakarta.persistence.criteria.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,16 +53,19 @@ public class SensorService {
     private final SensorRepository sensors;
     private final SensorDataRepository readings;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ApplicationEventPublisher events;
     // Hàm khởi tạo
     public SensorService(
             ObjectMapper objectMapper,
             SensorRepository sensors,
             SensorDataRepository readings,
-            SimpMessagingTemplate messagingTemplate) {
+            SimpMessagingTemplate messagingTemplate,
+            ApplicationEventPublisher events) {
         this.objectMapper = objectMapper;
         this.sensors = sensors;
         this.readings = readings;
         this.messagingTemplate = messagingTemplate;
+        this.events = events;
     }
 
     @Transactional
@@ -77,6 +81,7 @@ public class SensorService {
             saveReading("temperature", temperature, measuredAt);
             saveReading("humidity", humidity, measuredAt);
             saveReading("light", light, measuredAt);
+            events.publishEvent(new SensorSampleReceived(measuredAt, temperature, humidity, light));
             messagingTemplate.convertAndSend(
                     "/topic/sensors/live",
                     new ChartPointDto(
